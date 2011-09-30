@@ -1,0 +1,9 @@
+name = Registration
+description = Entity based registration system.
+package = Registration
+core = 7.x
+
+dependencies[] = entity
+
+files[] = includes/registration.entity.inc
+files[] = includes/registration.forms.inc
