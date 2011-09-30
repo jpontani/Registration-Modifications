@@ -7,23 +7,117 @@
 
 module_load_include('inc', 'registration', 'includes/registration.entity');
 
+function registration_edit_type($type) {
+  return "Edit $type";
+}
+
+function registration_delete_type($type) {
+  return "Delete $type";
+}
+
+function registration_types_page() {
+  $header = array(t('Name'), t('Operations'));
+  $rows = array();
+  foreach (registration_entity_types() as $type => $info) {
+    $links = array(
+      'edit' => array(
+        'title' => 'edit',
+        'href' => 'admin/structure/registration/types/' . $type . '/edit',
+      ),
+      'manage fields' => array(
+        'title' => 'manage fields',
+        'href' => 'admin/structure/registration/types/' . $type . '/manage/fields',
+      ),
+      'manage display' => array(
+        'title' => 'manage display',
+        'href' => 'admin/structure/registration/types/' . $type . '/manage/display',
+      ),
+      'delete' => array(
+        'title' => 'delete',
+        'href' => 'admin/structure/registration/types/' . $type . '/delete',
+      ),
+    );
+    $rows[] = array(
+      theme('registration_types', array('type' => $info)),
+      theme('links', array('links' => $links, 'attributes' => array('class' => 'links inline operations'))),
+    );
+  }
+  
+  if (empty($rows)) {
+    $rows[] = array(
+      array(
+        'data' => t('There are no registration types yet. <a href="@link">Add a Registration Type</a>', array('@link' => url('admin/structure/registration/types/add'))),
+        'colspan' => 2,
+      ),
+    );
+  }
+  
+  return theme('table', array('header' => $header, 'rows' => $rows));
+}
+
+function theme_registration_types($variables) {
+  $type = $variables['type'];
+
+  $output = check_plain($type->name);
+  $output .= ' <small> (Machine name: ' . check_plain($type->type) . ')</small>';
+  $output .= '<div class="description">' . filter_xss_admin($type->description) . '</div>';
+
+  return $output;
+}
+
+function registration_menu_alter(&$items) {
+  foreach (registration_entity_types() as $type => $info) {
+    $items['admin/structure/registration/types/' . $type . '/manage/fields']['context'] = MENU_CONTEXT_INLINE;
+    $items['admin/structure/registration/types/' . $type . '/manage/display']['context'] = MENU_CONTEXT_INLINE;
+  }
+}
+
 /**
  * Implements hook_menu().
  */
 function registration_menu() {
-  $items['admin/structure/registration/manage'] = array(
+  $items['admin/structure/registration'] = array(
     'title' => 'Registration',
-    'description' => 'Manage Registration structure',
-    'page callback' => 'registration_admin_page',
+    'description' => 'Manage Registration settings and types',
     'access arguments' => array('administer registration'),
-		
+    'page callback' => 'registration_admin_page',
   );
-  $items['admin/structure/registration/manage/settings'] = array(
+  $items['admin/structure/registration/settings'] = array(
     'title' => 'Settings',
-    'description' => 'Manage Registration settings',
+    'description' => 'Manage Registration settings and types',
+    'access arguments' => array('administer registration'),
+    'page callback' => 'registration_admin_page',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-
+  $items['admin/structure/registration/types'] = array(
+    'title' => 'Types',
+    'description' => 'Manage Registration Types',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'registration_types_page',
+    'access arguments' => array('administer registration'),
+  );
+  $items['admin/structure/registration/types/add'] = array(
+    'title' => 'Add a Registration Type',
+    'type' => MENU_LOCAL_ACTION,
+    'page callback' => 'registration_type_add',
+    'access arguments' => array('administer registration'),
+  );
+  $items['admin/structure/registration/types/%/edit'] = array(
+    'title' => 'edit',
+    'page callback' => 'registration_edit_type',
+    'page arguments' => array(4),
+    'access arguments' => array('administer registration'),
+    'context' => MENU_CONTEXT_INLINE,
+    'type' => MENU_LOCAL_ACTION,
+  );
+  $items['admin/structure/registration/types/%/delete'] = array(
+    'title' => 'delete',
+    'page callback' => 'registration_delete_type',
+    'page arguments' => array(4),
+    'access arguments' => array('administer registration'),
+    'context' => MENU_CONTEXT_INLINE,
+    'type' => MENU_LOCAL_ACTION,
+  );
   $items['registration/%registration'] = array(
     'title callback' => 'registration_page_title',
     'title arguments' => array(1),
@@ -143,13 +237,7 @@ function registration_admin_page() {
   );
   $out = theme('table', $table);
 
-  return t('The following table lists the registration status for each content 
-		type. You can enable/disable registrations from the content type settings 
-		page. You can also !manage_fields and their !display_settings.', 
-		array(
-			'!manage_fields' => l('manage registration fields', 'admin/structure/registration/manage/fields'),
-			'!display_settings' => l('display settings', 'admin/structure/registration/manage/display'),
-		)) . $out;
+  return $out;
 }
 
 /**
@@ -362,6 +450,9 @@ function registration_theme() {
   return array(
     'registration' => array(
       'arguments' => array('registration' => NULL),
+    ),
+    'registration_types' => array(
+      'arguments' => array('types' => NULL),
     ),
   );
 }

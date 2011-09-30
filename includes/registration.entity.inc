@@ -9,7 +9,7 @@
  * Implements hook_entity_info().
  */
 function registration_entity_info() {
-  return array(
+  $entities = array(
     'registration' => array(
       'module' => 'registration',
       'label' => t('Registration'),
@@ -24,15 +24,7 @@ function registration_entity_info() {
       'bundle keys' => array(
         'bundle' => 'type',
       ),
-      'bundles' => array(
-        'registration' => array(
-          'label' => 'Registration',
-          'admin' => array(
-            'path' => 'admin/structure/registration/manage',
-            'access arguments' => array('administer registration'),
-          ),
-        ),
-      ),
+      'bundles' => array(),
       'view modes' => array(
         'full' => array(
           'label' => t('Full Registration'),
@@ -43,6 +35,18 @@ function registration_entity_info() {
       'token type' => 'registration',
     ),
   );
+  
+  foreach (registration_entity_types() as $type => $info) {
+    $entities['registration']['bundles'][$type] = array(
+      'label' => $info->name,
+      'admin' => array(
+        'path' => 'admin/structure/registration/types/' . $info->type . '/manage',
+        'access arguments' => array('administer registration'),
+      ),
+    );
+  }
+  
+  return $entities;
 }
 
 function registration_uri($registration) {
@@ -101,6 +105,40 @@ function registration_entity_property_info_alter(&$info) {
   );
 
   return $info;
+}
+
+/**
+ * Returns all the bundles for the registration entity.
+ */
+function registration_entity_types() {
+  $types = &drupal_static(__FUNCTION__);
+  if (empty($types)) {
+    // types array is empty, so lets load it
+    $types = array();
+    
+    $tq = db_select('registration_type', 'rt')->fields('rt')->execute();
+    foreach ($tq as $row) {
+      $types[$row->type] = $row;
+    }
+  }
+  return $types;
+}
+
+/**
+ * Resets the cached list of registration types.
+ */
+function registration_entity_types_reset() {
+  $registration_types = &drupal_static('registration_entity_types');
+  $registration_types = NULL;
+}
+
+/**
+ * Loads a registration type.
+ */
+function registration_type_load($type) {
+  $types = registration_entity_types();
+  $type = str_replace('-', '_', $type);
+  return isset($types[$type]) ? $types[$type] : FALSE;
 }
 
 /**
