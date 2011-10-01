@@ -7,6 +7,9 @@
 
 module_load_include('inc', 'registration', 'includes/registration.entity');
 
+/**
+ * Form callback for adding or editing a registration type.
+ */
 function registration_type_form($type = NULL) {
   $name = '';
   $machine = '';
@@ -55,6 +58,9 @@ function registration_type_form($type = NULL) {
   return $form;
 }
 
+/**
+ * Submit handler for adding or editing a registration type.
+ */
 function registration_type_form_submit($form, $form_state) {
   $op = $form_state['values']['pop'];
   $msg = '';
@@ -79,6 +85,9 @@ function registration_type_form_submit($form, $form_state) {
   drupal_set_message(t('Registration entity ') . '<em>' . $record['type'] . '</em>' . t(' has been ') . $msg);
 }
 
+/**
+ * Machine name existence callback.
+ */
 function registration_entity_type_exists($type) {
   $types = registration_entity_types();
   if (array_key_exists($type, $types)) {
@@ -87,14 +96,16 @@ function registration_entity_type_exists($type) {
   return FALSE;
 }
 
-function registration_edit_type($type) {
-  return drupal_get_form('registration_type_form', $type);
-}
-
+/**
+ * Delete form callback.
+ */
 function registration_delete_type($type) {
   return "Delete $type";
 }
 
+/**
+ * Page callback to list all registration types.
+ */
 function registration_types_page() {
   $header = array(t('Name'), t('Operations'));
   $rows = array();
@@ -135,6 +146,9 @@ function registration_types_page() {
   return theme('table', array('header' => $header, 'rows' => $rows));
 }
 
+/**
+ * Themes a specific registration type row.
+ */
 function theme_registration_types($variables) {
   $type = $variables['type'];
 
@@ -145,6 +159,12 @@ function theme_registration_types($variables) {
   return $output;
 }
 
+/**
+ * Implements hook_menu_alter().
+ *
+ * Set all manage field and display links to inline context so they don't show
+ * up on the Types page.
+ */
 function registration_menu_alter(&$items) {
   foreach (registration_entity_types() as $type => $info) {
     $items['admin/structure/registration/types/' . $type . '/manage/fields']['context'] = MENU_CONTEXT_INLINE;
