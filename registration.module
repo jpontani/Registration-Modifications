@@ -7,8 +7,88 @@
 
 module_load_include('inc', 'registration', 'includes/registration.entity');
 
+function registration_type_form($type = NULL) {
+  $name = '';
+  $machine = '';
+  $desc = '';
+  $op = 'new';
+  if (is_string($type)) {
+    $type = registration_type_load($type);
+  }
+  if (!empty($type)) {
+    $name = $type->name;
+    $machine = $type->type;
+    $desc = $type->description;
+    $op = 'edit';
+  }
+
+  $form = array();
+
+  $form['pop'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $op,
+    '#value' => $op,
+  );
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Name',
+    '#default_value' => $name,
+  );
+  $form['bundle'] = array(
+    '#type' => 'machine_name',
+    '#title' => 'Machine name',
+    '#machine_name' => array(
+      'exists' => 'registration_entity_type_exists',
+    ),
+    '#default_value' => $machine,
+  );
+  $form['description'] = array(
+    '#type' => 'textarea',
+    '#title' => 'Description',
+    '#default_value' => $desc,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Submit',
+  );
+
+  return $form;
+}
+
+function registration_type_form_submit($form, $form_state) {
+  $op = $form_state['values']['pop'];
+  $msg = '';
+  $record = array(
+    'name' => $form_state['values']['name'],
+    'type' => $form_state['values']['bundle'],
+    'description' => $form_state['values']['description'],
+    'created' => REQUEST_TIME,
+    'changed' => REQUEST_TIME,
+  );
+  switch ($op) {
+    case 'new':
+      drupal_write_record('registration_type', $record);
+      $msg = t(' created.');
+      break;
+    case 'edit':
+      drupal_write_record('registration_type', $record, array('type'));
+      $msg = t(' updated.');
+      break;
+  }
+  registration_entity_types_reset();
+  drupal_set_message(t('Registration entity ') . '<em>' . $record['type'] . '</em>' . t(' has been ') . $msg);
+}
+
+function registration_entity_type_exists($type) {
+  $types = registration_entity_types();
+  if (array_key_exists($type, $types)) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
 function registration_edit_type($type) {
-  return "Edit $type";
+  return drupal_get_form('registration_type_form', $type);
 }
 
 function registration_delete_type($type) {
@@ -99,24 +179,23 @@ function registration_menu() {
   $items['admin/structure/registration/types/add'] = array(
     'title' => 'Add a Registration Type',
     'type' => MENU_LOCAL_ACTION,
-    'page callback' => 'registration_type_add',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('registration_type_form'),
     'access arguments' => array('administer registration'),
   );
   $items['admin/structure/registration/types/%/edit'] = array(
     'title' => 'edit',
-    'page callback' => 'registration_edit_type',
-    'page arguments' => array(4),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('registration_type_form', 4),
     'access arguments' => array('administer registration'),
-    'context' => MENU_CONTEXT_INLINE,
-    'type' => MENU_LOCAL_ACTION,
+    'type' => MENU_CALLBACK,
   );
   $items['admin/structure/registration/types/%/delete'] = array(
     'title' => 'delete',
     'page callback' => 'registration_delete_type',
     'page arguments' => array(4),
     'access arguments' => array('administer registration'),
-    'context' => MENU_CONTEXT_INLINE,
-    'type' => MENU_LOCAL_ACTION,
+    'type' => MENU_CALLBACK,
   );
   $items['registration/%registration'] = array(
     'title callback' => 'registration_page_title',
@@ -573,7 +652,7 @@ function registration_update_node_settings($nid, $settings) {
 /**
  * Implements hook_cron().
  */
-function registration_cron() {
+function registration_cron_nope() {
 	//@TODO: need to have a sensible batch limit, passed in as a limit param
 	
 	// grab all registrations that have reminders set for this day
