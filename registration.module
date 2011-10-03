@@ -10,18 +10,19 @@ module_load_include('inc', 'registration', 'includes/registration.entity');
 /**
  * Form callback for adding or editing a registration type.
  */
-function registration_type_form($type = NULL) {
+function registration_type_form($form, &$form_state, $type = NULL) {
   $name = '';
   $machine = '';
   $desc = '';
   $op = 'new';
+  $mtype = FALSE;
   if (is_string($type)) {
-    $type = registration_type_load($type);
+    $mtype = registration_type_load($type);
   }
-  if (!empty($type)) {
-    $name = $type->name;
-    $machine = $type->type;
-    $desc = $type->description;
+  if ($mtype) {
+    $name = $mtype->name;
+    $machine = $mtype->type;
+    $desc = $mtype->description;
     $op = 'edit';
   }
 
@@ -64,25 +65,29 @@ function registration_type_form($type = NULL) {
 function registration_type_form_submit($form, $form_state) {
   $op = $form_state['values']['pop'];
   $msg = '';
-  $record = array(
+  $record = (object) array(
     'name' => $form_state['values']['name'],
     'type' => $form_state['values']['bundle'],
     'description' => $form_state['values']['description'],
     'created' => REQUEST_TIME,
     'changed' => REQUEST_TIME,
   );
+  $ret = '';
   switch ($op) {
     case 'new':
-      drupal_write_record('registration_type', $record);
+      $ret = drupal_write_record('registration_type', $record);
       $msg = t(' created.');
       break;
     case 'edit':
-      drupal_write_record('registration_type', $record, array('type'));
+      unset($record->created);
+      $ret = drupal_write_record('registration_type', $record, array('type'));
       $msg = t(' updated.');
       break;
   }
+  entity_info_cache_clear();
   registration_entity_types_reset();
-  drupal_set_message(t('Registration entity ') . '<em>' . $record['type'] . '</em>' . t(' has been ') . $msg);
+  drupal_set_message(t('Registration entity ') . '<em>' . $record->type . '</em>' . t(' has been ') . $msg);
+  drupal_goto('admin/structure/registration/types');
 }
 
 /**
@@ -160,6 +165,19 @@ function theme_registration_types($variables) {
 }
 
 /**
+ * Registration entity edit/delete form title callback.
+ */
+function registration_form_title($type, $action) {
+  $type = registration_type_load($type);
+  switch ($action) {
+    case 'Delete':
+      return 'Delete type ' . $type->name;
+    case 'Edit':
+      return 'Edit type ' . $type->name;
+  }
+}
+
+/**
  * Implements hook_menu_alter().
  *
  * Set all manage field and display links to inline context so they don't show
@@ -205,6 +223,8 @@ function registration_menu() {
   );
   $items['admin/structure/registration/types/%/edit'] = array(
     'title' => 'edit',
+    'title callback' => 'registration_form_title',
+    'title arguments' => array(4, 'Edit'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('registration_type_form', 4),
     'access arguments' => array('administer registration'),
@@ -212,6 +232,8 @@ function registration_menu() {
   );
   $items['admin/structure/registration/types/%/delete'] = array(
     'title' => 'delete',
+    'title callback' => 'registration_form_title',
+    'title arguments' => array(4, 'Delete'),
     'page callback' => 'registration_delete_type',
     'page arguments' => array(4),
     'access arguments' => array('administer registration'),
@@ -322,16 +344,32 @@ function registration_permission() {
  */
 function registration_admin_page() {
   $rows = array();
-  foreach (node_type_get_names() as $type => $name) {
-    $rows[] = array(
-      l($name, 'admin/structure/types/manage/' . $type),
-      (variable_get('registration_node_status_' . $type, 0)) ? t('Enabled') :
-      t('Disabled'),
-    );
+  $entities = entity_get_info();
+  foreach ($entities as $type => $data) {
+    if (!empty($data['bundles'])) {
+      $rows[] = array(
+        array(
+          'data' => '<b>' . $data['label'] . '</b>',
+          'colspan' => 2,
+        ),
+      );
+      foreach ($data['bundles'] as $bundle => $bundle_data) {
+        $link = $bundle_data['label'];
+        if (!empty($bundle_data['admin'])) {
+          if (!empty($bundle_data['admin']['real path'])) {
+            $link = l($bundle_data['label'], $bundle_data['admin']['real path']);
+          }
+          else {
+            $link = l($bundle_data['label'], $bundle_data['admin']['path']);
+          }
+        }
+        $rows[] = array($link, 'status');
+      }
+    }
   }
 
   $table = array(
-    'header' => array(t('Content type'), t('Registration status')),
+    'header' => array(t('Entity Type'), t('Registration Status')),
     'rows' => $rows,
   );
   $out = theme('table', $table);
