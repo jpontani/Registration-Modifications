@@ -200,20 +200,20 @@ function registration_status_form($form, $form_state, $type, $bundle) {
 
   $form['type'] = array(
     '#type' => 'hidden',
-    '#value' => $type . '_' . $bundle,
+    '#value' => $type . ':' . $bundle,
   );
 
   $form['status'] = array(
     '#type' => 'radios',
     '#title' => t('Status'),
-    '#default_value' => variable_get('registration_' . $type . '_' . $bundle . '_status', 0),
+    '#default_value' => variable_get('registration_' . $type . ':' . $bundle . '_status', 0),
     '#options' => array('Disabled', 'Enabled'),
   );
   
   $form['registration_entity'] = array(
     '#type' => 'select',
     '#title' => t('Registration Type'),
-    '#default_value' => variable_get('registration_' . $type . '_' . $bundle . '_bundle', ''),
+    '#default_value' => variable_get('registration_' . $type . ':' . $bundle . '_bundle', ''),
     '#options' => registration_bundle_options(),
   );
 
@@ -335,53 +335,6 @@ function registration_menu() {
     'file' => 'includes/registration.forms.inc',
   );
 
-  // node local tasks
-  $items['node/%node/register'] = array(
-    'title' => 'Register',
-    'page callback' => 'registration_register_page',
-    'page arguments' => array(1),
-    'access callback' => 'registration_register_page_access',
-    'access arguments' => array(1),
-    'file' => 'includes/registration.forms.inc',
-    'type' => MENU_LOCAL_TASK,
-  );
-  $items['node/%node/registrations'] = array(
-    'title' => 'Manage Registrations',
-    'page callback' => 'registration_registrations_page',
-    'page arguments' => array(1),
-    'access callback' => 'registration_administer_registrations_access',
-    'access arguments' => array(1),
-    'type' => MENU_LOCAL_TASK,
-  );
-  $items['node/%node/registrations/list'] = array(
-    'title' => 'Registrations',
-    'page callback' => 'registration_registrations_page',
-    'page arguments' => array(1),
-    'access callback' => 'registration_administer_registrations_access',
-    'access arguments' => array(1),
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-  );
-  $items['node/%node/registrations/settings'] = array(
-    'title' => 'Settings',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('registration_registrations_settings_form', 1),
-    'access callback' => 'registration_administer_registrations_access',
-    'access arguments' => array(1),
-    'file' => 'includes/registration.forms.inc',
-    'weight' => 9,
-    'type' => MENU_LOCAL_TASK,
-  );
-  $items['node/%node/registrations/broadcast'] = array(
-    'title' => 'Email Registrants',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('registration_registrations_broadcast_form', 1),
-    'access callback' => 'registration_administer_registrations_access',
-    'access arguments' => array(1),
-    'file' => 'includes/registration.forms.inc',
-    'weight' => 10,
-    'type' => MENU_LOCAL_TASK,
-  );
-
   return $items;
 }
 
@@ -404,6 +357,39 @@ function registration_permission() {
   );
 }
 
+function registration_entity_view_alter(&$build, $type) {
+  $types_to_alter = array();
+  $types_to_alter_query = db_select('variable', 'v')->fields('v')->condition('name', 'registration_%_bundle', 'LIKE')->execute();
+  foreach ($types_to_alter_query as $row) {
+    $mtype = $row->name;
+    $mtype = substr($mtype, 13);
+    $mtype = substr($mtype, 0, -7);
+    $types_to_alter[] = $mtype;
+  }
+  //print "<pre>";
+  //print_r($build);
+  //print "</pre>";
+  if (in_array($type . ':' . $build['#bundle'], $types_to_alter)) {
+    // the type is in the types of entities to alter for registrations
+    $build['registration_register_form'] = drupal_get_form('registration_register_form', $type, $build['#bundle']);
+  }
+}
+
+/**
+ *
+ */
+function registration_register_form($form, &$form_state, $type, $bundle) {
+  $form = array();
+  $form['type'] = array(
+    '#type' => 'hidden',
+    '#value' => $type . ':' . $bundle,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Register',
+  );
+  return $form;
+}
 /**
  * Landing page for managing the structure of registrations.
  */
@@ -420,8 +406,8 @@ function registration_admin_page() {
       );
       foreach ($data['bundles'] as $bundle => $bundle_data) {
         $link = $bundle_data['label'];
-        $status = variable_get('registration_' . $type . '_' . $bundle . '_status', 0);
-        $usingtype = variable_get('registration_' . $type . '_' . $bundle . '_bundle', '');
+        $status = variable_get('registration_' . $type . ':' . $bundle . '_status', 0);
+        $usingtype = variable_get('registration_' . $type . ':' . $bundle . '_bundle', '');
         $status = ($status ? 'Enabled' : 'Disabled');
         $status = l($status, 'admin/structure/registration/status/' . $type . '/' . $bundle) . ($status == 'Enabled' ? ' <small>(' . $usingtype . ')</small>' : '');
         if (!empty($bundle_data['admin'])) {
