@@ -304,6 +304,12 @@ function registration_menu() {
     'access arguments' => array('administer registration'),
     'type' => MENU_CALLBACK,
   );
+  $items['registration/register/%/%/%'] = array(
+    'title' => 'Register',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('registration_register_entity_form', 2, 3, 4),
+    'access arguments' => array('add registration'),
+  );
   $items['registration/%registration'] = array(
     'title callback' => 'registration_page_title',
     'title arguments' => array(1),
@@ -366,23 +372,31 @@ function registration_entity_view_alter(&$build, $type) {
     $mtype = substr($mtype, 0, -7);
     $types_to_alter[] = $mtype;
   }
-  //print "<pre>";
+  //print '<div><pre>';
   //print_r($build);
-  //print "</pre>";
+  //print '</pre></div>';
   if (in_array($type . ':' . $build['#bundle'], $types_to_alter)) {
     // the type is in the types of entities to alter for registrations
-    $build['registration_register_form'] = drupal_get_form('registration_register_form', $type, $build['#bundle']);
+    $build['registration_register_form'] = drupal_get_form('registration_register_form', $type, $build['#bundle'], $build['#node']->nid);
   }
 }
 
 /**
  *
  */
-function registration_register_form($form, &$form_state, $type, $bundle) {
+function registration_register_form($form, &$form_state, $type, $bundle, $eid) {
   $form = array();
-  $form['type'] = array(
+  $form['eid'] = array(
     '#type' => 'hidden',
-    '#value' => $type . ':' . $bundle,
+    '#value' => $eid,
+  );
+  $form['etype'] = array(
+    '#type' => 'hidden',
+    '#value' => $type,
+  );
+  $form['bundle'] = array(
+    '#type' => 'hidden',
+    '#value' => $bundle,
   );
   $form['submit'] = array(
     '#type' => 'submit',
@@ -390,6 +404,28 @@ function registration_register_form($form, &$form_state, $type, $bundle) {
   );
   return $form;
 }
+
+/**
+ *
+ */
+function registration_register_form_submit($form, &$form_state) {
+  drupal_goto('registration/register/' . $form_state['values']['etype'] . '/' . $form_state['values']['bundle'] . '/' . $form_state['values']['eid']);
+}
+
+/**
+ *
+ */
+function registration_register_entity_form($form, &$form_state, $type, $bundle, $entityid) {
+  $entity = variable_get('registration_' . $type . ':' . $bundle . '_bundle', FALSE);
+  $form = array();
+  if ($entity) {
+    $etype = $entity;
+    $entity = entity_get_controller('registration')->create(array('type' => $entity));
+    field_attach_form($etype, $entity, $form, $form_state);
+    return $form;
+  }
+}
+
 /**
  * Landing page for managing the structure of registrations.
  */
