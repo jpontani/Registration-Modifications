@@ -86,7 +86,7 @@ function registration_type_form_submit($form, $form_state) {
   }
   entity_info_cache_clear();
   registration_entity_types_reset();
-  drupal_set_message(t('Registration entity ') . '<em>' . $record->type . '</em>' . t(' has been ') . $msg);
+  drupal_set_message(t('Registration entity <em>@type</em> has been @msg.'), array('@type' => $record->type, '@msg' => $msg));
   drupal_goto('admin/structure/registration/types');
 }
 
@@ -167,13 +167,15 @@ function theme_registration_types($variables) {
 /**
  * Registration entity edit/delete form title callback.
  */
-function registration_form_title($type, $action) {
-  $type = registration_type_load($type);
+function registration_form_title($type, $action, $bundle = NULL) {
+  $mtype = registration_type_load($type);
   switch ($action) {
+    case 'Status':
+      return 'Set Status for ' . $type . ':' . $bundle;
     case 'Delete':
-      return 'Delete type ' . $type->name;
+      return 'Delete type ' . $mtype->name;
     case 'Edit':
-      return 'Edit type ' . $type->name;
+      return 'Edit type ' . $mtype->name;
   }
 }
 
@@ -191,6 +193,61 @@ function registration_menu_alter(&$items) {
 }
 
 /**
+ * Entity registration status form callback.
+ */
+function registration_status_form($form, $form_state, $type, $bundle) {
+  $form = array();
+
+  $form['type'] = array(
+    '#type' => 'hidden',
+    '#value' => $type . '_' . $bundle,
+  );
+
+  $form['status'] = array(
+    '#type' => 'radios',
+    '#title' => t('Status'),
+    '#default_value' => variable_get('registration_' . $type . '_' . $bundle . '_status', 0),
+    '#options' => array('Disabled', 'Enabled'),
+  );
+  
+  $form['registration_entity'] = array(
+    '#type' => 'select',
+    '#title' => t('Registration Type'),
+    '#default_value' => variable_get('registration_' . $type . '_' . $bundle . '_bundle', ''),
+    '#options' => registration_bundle_options(),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Save Settings',
+  );
+
+  return $form;
+}
+
+/**
+ * Entity registration status submit handler.
+ */
+function registration_status_form_submit($form, &$form_state) {
+  $type = $form_state['values']['type'];
+  variable_set('registration_' . $type . '_bundle', $form_state['values']['registration_entity']);
+  variable_set('registration_' . $type . '_status', $form_state['values']['status']);
+  drupal_set_message(t('Registration settings updated for @type.', array('@type' => $type)));
+  drupal_goto('admin/structure/registration');
+}
+
+/**
+ * Callback to get options list of registration bundles.
+ */
+function registration_bundle_options() {
+  $options = array('' => 'Select a Bundle');
+  foreach (registration_entity_types() as $type => $info) {
+    $options[$type] = $info->name;
+  }
+  return $options;
+}
+
+/**
  * Implements hook_menu().
  */
 function registration_menu() {
@@ -199,6 +256,14 @@ function registration_menu() {
     'description' => 'Manage Registration settings and types',
     'access arguments' => array('administer registration'),
     'page callback' => 'registration_admin_page',
+  );
+  $items['admin/structure/registration/status/%/%'] = array(
+    'title' => 'Enable Registrations',
+    'title callback' => 'registration_form_title',
+    'title arguments' => array(4, 'Status', 5),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('registration_status_form', 4, 5),
+    'access arguments' => array('administer registration'),
   );
   $items['admin/structure/registration/settings'] = array(
     'title' => 'Settings',
@@ -346,7 +411,7 @@ function registration_admin_page() {
   $rows = array();
   $entities = entity_get_info();
   foreach ($entities as $type => $data) {
-    if (!empty($data['bundles'])) {
+    if (!empty($data['bundles']) && $type != 'registration') {
       $rows[] = array(
         array(
           'data' => '<b>' . $data['label'] . '</b>',
@@ -355,6 +420,10 @@ function registration_admin_page() {
       );
       foreach ($data['bundles'] as $bundle => $bundle_data) {
         $link = $bundle_data['label'];
+        $status = variable_get('registration_' . $type . '_' . $bundle . '_status', 0);
+        $usingtype = variable_get('registration_' . $type . '_' . $bundle . '_bundle', '');
+        $status = ($status ? 'Enabled' : 'Disabled');
+        $status = l($status, 'admin/structure/registration/status/' . $type . '/' . $bundle) . ($status == 'Enabled' ? ' <small>(' . $usingtype . ')</small>' : '');
         if (!empty($bundle_data['admin'])) {
           if (!empty($bundle_data['admin']['real path'])) {
             $link = l($bundle_data['label'], $bundle_data['admin']['real path']);
@@ -363,7 +432,7 @@ function registration_admin_page() {
             $link = l($bundle_data['label'], $bundle_data['admin']['path']);
           }
         }
-        $rows[] = array($link, 'status');
+        $rows[] = array($link, $status);
       }
     }
   }
