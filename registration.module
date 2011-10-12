@@ -635,7 +635,7 @@ function registration_register_page_access($node) {
 function registration_administer_registrations_access($node) {
   $ret = FALSE;
   if (variable_get('registration_node_status_' . $node->type, 0)) {
-    if (user_access('administer mkc_registration')) {
+    if (user_access('administer registration')) {
       $ret = TRUE;
     }
   }
@@ -661,10 +661,28 @@ function registration_register_page($node) {
  * Page callback for viewing registrations
  */
 function registration_registrations_page($node) {
+	$header = array(
+		array('data' => t('id'), 'field' => 'registration_id', 'type' => 'property', 
+				'specifier' => 'registration_id'),
+		array('data' => t('Email'), 'field' => 'mail', 'type' => 'property', 
+				'specifier' => 'mail'),
+		array('data' => t('Created By'), 'field' => 'author_uid', 
+				'type' => 'property', 'specifier' => 'author_uid'),
+		array('data' => t('Count'), 'field' => 'count', 'type' => 'property', 
+				'specifier' => 'count'),
+		array('data' => t('Created'), 'field' => 'created', 'sort' => 'desc', 
+				'type' => 'property', 'specifier' => 'created'),
+		array('data' => t('Actions')),
+	);
+	
   $query = new EntityFieldQuery;
-  $query->entityCondition('entity_type', 'registration')->propertyCondition('nid', $node->nid);
-  $result = $query->execute();
-
+  $result = $query
+		->entityCondition('entity_type', 'registration')
+		->propertyCondition('nid', $node->nid)
+		->pager(20)
+		->tableSort($header)
+		->execute();
+		
   if (!empty($result['registration'])) {
     $registrations = registration_load_multiple(array_keys($result['registration']));
 
@@ -690,14 +708,24 @@ function registration_registrations_page($node) {
       );
     }
 
+		$settings = registration_node_settings($node->nid);
+				
     $table = array(
-      'header' => array(t('id'), t('Email'), t('Created By'), t('Count'), t('Created'), t('Actions')),
+      'header' => $header,
       'rows' => $rows,
+			'caption' => t('List of registrations for %title. !count of !capacity slots are filled.', 
+				array(
+					'%title' => $node->title,
+ 					'!count' => '<strong>' . registration_event_count($node->nid) . '</strong>', 
+					'!capacity' => '<strong>' . $settings['capacity'] . '</strong>'
+				))
     );
-    $out = theme('table', $table);
+
+    $out = theme('table', $table) . theme('pager');
   }
   else {
-    $out = t('There are no registratrants for %name', array('%name' => $node->title));
+    $out = t('There are no registratrants for %name', 
+				array('%name' => $node->title));
   }
 
   return $out;
@@ -728,10 +756,12 @@ function registration_has_room($nid) {
  * @return int
  */
 function registration_event_count($nid) {
-	// @TODO: Add static variable
-  $count = db_query("SELECT sum(nid*count) FROM {registration} WHERE nid = :nid",
-    array(':nid' => $nid)
-  )->fetchField();
+	$count = &drupal_static(__FUNCTION__, FALSE);
+	if (!$count) {
+	  $count = db_query("SELECT sum(count) FROM {registration} WHERE nid = :nid",
+	    array(':nid' => $nid)
+	  )->fetchField();		
+	}
   return $count;
 }
 
@@ -835,43 +865,46 @@ function registration_send_broadcast($node, $subject, $message) {
   if (!empty($entities)) {
     $recipients = array();
 
-    // load registrations and build an array of recipients
-    $registrations = registration_load_multiple(
-      array_keys($entities['registration'])
-    );
-    foreach ($registrations as $registration) {
-      $recipients[] = $registration->mail;
-    }
-
-    // send the email and communicate results
     $params = array(
       'subject' => $subject,
       'message' => $message,
     );
-    $result = drupal_mail('registration', 'broadcast',
-      implode(', ', $recipients), $language, $params, $from
+
+    // load registrations and build an array of recipients
+    $registrations = registration_load_multiple(
+      array_keys($entities['registration'])
     );
-    if ($result['result']) {
-      drupal_set_message(t('The message has been sent to @count registrants.',
-        array('@count' => count($recipients))
-      ));
-			watchdog('registration', 'Registration email sent to @count registrants.',
-				array('@count' => count($recipients))
-			);
+
+    // send the email to each registrant and communicate results
+		$success_count = 0;
+    foreach ($registrations as $registration) {
+      $recipients[] = $registration->mail;
+	    $result = drupal_mail('registration', 'broadcast',
+	      $registration->mail, $language, $params, $from
+	    );
+    	if ($result['result']) {
+				$success_count++;
+			}
+			else {
+				watchdog('registration', 'Failed to send registration broadcast email to %email.',
+					array('%email' => $registration->mail), 'WATCHDOG_ERROR'
+				);
+			}
     }
-    else {
-      drupal_set_message(
-        t('There was an error sending the message.'),
-        $type = 'error'
-      );
-			watchdog('registration', 'Failed to send registration broadcast email.',
-				array(), 'WATCHDOG_ERROR'
+
+    if ($success_count) {
+      drupal_set_message(t('Registration broadcast sent to @count registrants.',
+        array('@count' => $success_count)
+      ));
+			watchdog('registration', 'Registration broadcast sent to @count registrants.',
+				array('@count' => $success_count)
 			);
     }
   }
   else {
     drupal_set_message(
-      t('There are no participants registered for this %type.', array('%type' => $node->type)),
+      t('There are no participants registered for this %type.', 
+					array('%type' => $node->type)),
       $type = 'warning'
     );
   }
@@ -911,12 +944,13 @@ function registration_cron_nope() {
 		->fields('rn')
 		->condition('send_reminder', 1)
 		->condition('reminder_date', date('Y-m-d 00:00:00'))
+		->range(0, 10)
 		->execute()
-		->fetchAssoc();
+		->fetchAllAssoc('nid');
 
 	foreach ($results as $result) {
-		$node = node_load($result['nid']);
-		$message = $result['message'];
+		$node = node_load($result->nid);
+		$message = $result->reminder_template;
 		if (module_exists('token')) {
 			$message = token_replace($message, array('node' => $node));
 		}
