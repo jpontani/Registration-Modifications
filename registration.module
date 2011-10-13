@@ -8,24 +8,6 @@
 module_load_include('inc', 'registration', 'includes/registration.entity');
 
 /**
-<<<<<<< HEAD
- * Implements hook_menu().
- */
-function registration_menu() {
-  $items['admin/structure/registration/manage'] = array(
-    'title' => 'Registration',
-    'description' => 'Manage Registration structure',
-    'page callback' => 'registration_admin_page',
-    'access arguments' => array('administer registration'),
-		
-  );
-  $items['admin/structure/registration/manage/settings'] = array(
-    'title' => 'Settings',
-    'description' => 'Manage Registration settings',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-  );
-
-=======
  * Form callback for adding or editing a registration type.
  */
 function registration_type_form($form, &$form_state, $type = NULL) {
@@ -34,17 +16,22 @@ function registration_type_form($form, &$form_state, $type = NULL) {
   $desc = '';
   $op = 'new';
   $mtype = FALSE;
+  $form = array();
+
   if (is_string($type)) {
     $mtype = registration_type_load($type);
   }
+
   if ($mtype) {
     $name = $mtype->name;
     $machine = $mtype->type;
     $desc = $mtype->description;
     $op = 'edit';
+    $form['bundle_old'] = array(
+      '#type' => 'hidden',
+      '#value' => $machine,
+    );
   }
-
-  $form = array();
 
   $form['pop'] = array(
     '#type' => 'hidden',
@@ -95,11 +82,13 @@ function registration_type_form_submit($form, $form_state) {
     case 'new':
       $ret = drupal_write_record('registration_type', $record);
       $msg = t(' created.');
+      field_attach_create_bundle('registration', $form_state['values']['bundle']);
       break;
     case 'edit':
       unset($record->created);
       $ret = drupal_write_record('registration_type', $record, array('type'));
       $msg = t(' updated.');
+      field_attach_rename_bundle('registration', $form_state['values']['bundle_old'], $form_state['values']['bundle']);
       break;
   }
   entity_info_cache_clear();
@@ -121,6 +110,10 @@ function registration_entity_type_exists($type) {
 
 /**
  * Delete form callback.
+ *
+ * @todo Delete all registrations of that type.
+ * @todo Delete all variables that have this type as the registration entity.
+ * @todo Delete all fields associated with only this entity.
  */
 function registration_delete_type($type) {
   return "Delete $type";
@@ -328,7 +321,6 @@ function registration_menu() {
     'page arguments' => array('registration_register_entity_form', 2, 3, 4),
     'access arguments' => array('add registration'),
   );
->>>>>>> bb1b2bd4e974c3a77d875e91c2b8979914b84221
   $items['registration/%registration'] = array(
     'title callback' => 'registration_page_title',
     'title arguments' => array(1),
@@ -360,7 +352,6 @@ function registration_menu() {
     'file' => 'includes/registration.forms.inc',
   );
 
-<<<<<<< HEAD
   // node local tasks
   $items['node/%node/register'] = array(
     'title' => 'Register',
@@ -408,8 +399,6 @@ function registration_menu() {
     'type' => MENU_LOCAL_TASK,
   );
 
-=======
->>>>>>> bb1b2bd4e974c3a77d875e91c2b8979914b84221
   return $items;
 }
 
@@ -417,23 +406,41 @@ function registration_menu() {
  * Implements hook_permission().
  */
 function registration_permission() {
-  return array(
+  $perms = array(
     'administer registration' => array(
       'title' => t('Administer registration'),
       'description' => t('Perform administration tasks for Registrations.'),
       'restrict access' => TRUE,
     ),
-    'view registration' => array(
-      'title' => t('View registrations'),
+    'view any registration' => array(
+      'title' => t('View any registration'),
     ),
-    'add registration' => array(
-      'title' => t('Add registrations'),
+    'add any registration' => array(
+      'title' => t('Add any registration'),
     ),
   );
+
+  foreach (registration_entity_types() as $type => $info) {
+    $perms['create ' . $type . ' registration'] = array(
+      'title' => t('Create <em> ') . $info->name . t('</em> registrations'),
+    );
+    $perms['edit ' . $type . ' registration'] = array(
+      'title' => t('Edit <em> ') . $info->namee . t('</em> registrations'),
+    );
+    $perms['delete ' . $type . ' registration'] = array(
+      'title' => t('Delete <em> ') . $info->name . t('</em> registrations'),
+    );
+    $perms['view ' . $type . ' registration'] = array(
+      'title' => t('View <em> ') . $info->name . t('</em> registrations'),
+    );
+  }
+
+  return $perms;
 }
 
-<<<<<<< HEAD
-=======
+/**
+ * Implements hook_entity_view_alter().
+ */
 function registration_entity_view_alter(&$build, $type) {
   $types_to_alter = array();
   $types_to_alter_query = db_select('variable', 'v')->fields('v')->condition('name', 'registration_%_bundle', 'LIKE')->execute();
@@ -443,9 +450,6 @@ function registration_entity_view_alter(&$build, $type) {
     $mtype = substr($mtype, 0, -7);
     $types_to_alter[] = $mtype;
   }
-  //print '<div><pre>';
-  //print_r($build);
-  //print '</pre></div>';
   if (in_array($type . ':' . $build['#bundle'], $types_to_alter)) {
     // the type is in the types of entities to alter for registrations
     $build['registration_register_form'] = drupal_get_form('registration_register_form', $type, $build['#bundle'], $build['#node']->nid);
@@ -453,7 +457,7 @@ function registration_entity_view_alter(&$build, $type) {
 }
 
 /**
- *
+ * Form builder for adding a Register button to an entity.
  */
 function registration_register_form($form, &$form_state, $type, $bundle, $eid) {
   $form = array();
@@ -477,44 +481,31 @@ function registration_register_form($form, &$form_state, $type, $bundle, $eid) {
 }
 
 /**
- *
+ * Register button form submit callback.
  */
 function registration_register_form_submit($form, &$form_state) {
   drupal_goto('registration/register/' . $form_state['values']['etype'] . '/' . $form_state['values']['bundle'] . '/' . $form_state['values']['eid']);
 }
 
 /**
- *
+ * Form builder for registering for an entity. Adds bundle's fields to the form.
  */
 function registration_register_entity_form($form, &$form_state, $type, $bundle, $entityid) {
   $entity = variable_get('registration_' . $type . ':' . $bundle . '_bundle', FALSE);
   $form = array();
   if ($entity) {
     $etype = $entity;
-    $entity = entity_get_controller('registration')->create(array('type' => $entity));
+    $entity = entity_create('registration', array('type' => $entity));
     field_attach_form($etype, $entity, $form, $form_state);
     return $form;
   }
 }
 
->>>>>>> bb1b2bd4e974c3a77d875e91c2b8979914b84221
 /**
  * Landing page for managing the structure of registrations.
  */
 function registration_admin_page() {
   $rows = array();
-<<<<<<< HEAD
-  foreach (node_type_get_names() as $type => $name) {
-    $rows[] = array(
-      l($name, 'admin/structure/types/manage/' . $type),
-      (variable_get('registration_node_status_' . $type, 0)) ? t('Enabled') :
-      t('Disabled'),
-    );
-  }
-
-  $table = array(
-    'header' => array(t('Content type'), t('Registration status')),
-=======
   $entities = entity_get_info();
   foreach ($entities as $type => $data) {
     if (!empty($data['bundles']) && $type != 'registration') {
@@ -545,22 +536,11 @@ function registration_admin_page() {
 
   $table = array(
     'header' => array(t('Entity Type'), t('Registration Status')),
->>>>>>> bb1b2bd4e974c3a77d875e91c2b8979914b84221
     'rows' => $rows,
   );
   $out = theme('table', $table);
 
-<<<<<<< HEAD
-  return t('The following table lists the registration status for each content 
-		type. You can enable/disable registrations from the content type settings 
-		page. You can also !manage_fields and their !display_settings.', 
-		array(
-			'!manage_fields' => l('manage registration fields', 'admin/structure/registration/manage/fields'),
-			'!display_settings' => l('display settings', 'admin/structure/registration/manage/display'),
-		)) . $out;
-=======
   return $out;
->>>>>>> bb1b2bd4e974c3a77d875e91c2b8979914b84221
 }
 
 /**
@@ -804,12 +784,9 @@ function registration_theme() {
     'registration' => array(
       'arguments' => array('registration' => NULL),
     ),
-<<<<<<< HEAD
-=======
     'registration_types' => array(
       'arguments' => array('types' => NULL),
     ),
->>>>>>> bb1b2bd4e974c3a77d875e91c2b8979914b84221
   );
 }
 
@@ -932,11 +909,7 @@ function registration_update_node_settings($nid, $settings) {
 /**
  * Implements hook_cron().
  */
-<<<<<<< HEAD
-function registration_cron() {
-=======
 function registration_cron_nope() {
->>>>>>> bb1b2bd4e974c3a77d875e91c2b8979914b84221
 	//@TODO: need to have a sensible batch limit, passed in as a limit param
 	
 	// grab all registrations that have reminders set for this day

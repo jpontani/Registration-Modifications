@@ -140,8 +140,6 @@ function registration_schema() {
     'primary key' => array('nid'),
   );
 
-<<<<<<< HEAD
-=======
   $schema['registration_type'] = array(
     'description' => 'Registration entity types.',
     'fields' => array(
@@ -177,7 +175,5 @@ function registration_schema() {
     'primary key' => array('type'),
   );
 
->>>>>>> bb1b2bd4e974c3a77d875e91c2b8979914b84221
   return $schema;
 }
-

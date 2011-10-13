@@ -9,11 +9,7 @@
  * Implements hook_entity_info().
  */
 function registration_entity_info() {
-<<<<<<< HEAD
-  return array(
-=======
   $entities = array(
->>>>>>> bb1b2bd4e974c3a77d875e91c2b8979914b84221
     'registration' => array(
       'module' => 'registration',
       'label' => t('Registration'),
@@ -28,19 +24,7 @@ function registration_entity_info() {
       'bundle keys' => array(
         'bundle' => 'type',
       ),
-<<<<<<< HEAD
-      'bundles' => array(
-        'registration' => array(
-          'label' => 'Registration',
-          'admin' => array(
-            'path' => 'admin/structure/registration/manage',
-            'access arguments' => array('administer registration'),
-          ),
-        ),
-      ),
-=======
       'bundles' => array(),
->>>>>>> bb1b2bd4e974c3a77d875e91c2b8979914b84221
       'view modes' => array(
         'full' => array(
           'label' => t('Full Registration'),
@@ -51,9 +35,7 @@ function registration_entity_info() {
       'token type' => 'registration',
     ),
   );
-<<<<<<< HEAD
-=======
-  
+
   foreach (registration_entity_types() as $type => $info) {
     $entities['registration']['bundles'][$type] = array(
       'label' => $info->name,
@@ -63,9 +45,8 @@ function registration_entity_info() {
       ),
     );
   }
-  
+
   return $entities;
->>>>>>> bb1b2bd4e974c3a77d875e91c2b8979914b84221
 }
 
 function registration_uri($registration) {
@@ -127,8 +108,6 @@ function registration_entity_property_info_alter(&$info) {
 }
 
 /**
-<<<<<<< HEAD
-=======
  * Returns all the bundles for the registration entity.
  */
 function registration_entity_types() {
@@ -163,7 +142,6 @@ function registration_type_load($type) {
 }
 
 /**
->>>>>>> bb1b2bd4e974c3a77d875e91c2b8979914b84221
  * Loads a registration by ID.
  */
 function registration_load($registration_id) {
