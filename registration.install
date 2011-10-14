@@ -25,7 +25,19 @@ function registration_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'nid' => array(
+      'entity_type' => array(
+        'description' => 'The entity type that this registration is tied to.',
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+      ),
+      'entity_bundle' => array(
+        'description' => 'The entity bundle that this registration is tied to.',
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+      ),
+      'eid' => array(
         'description' => 'The id of the entity this registration is associated with.',
         'type' => 'int',
         'not null' => TRUE,
@@ -58,6 +70,12 @@ function registration_schema() {
       ),
       'updated' => array(
         'description' => 'The Unix timestamp when the registration was most recently saved.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'status' => array(
+        'description' => 'The status of this registration.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
