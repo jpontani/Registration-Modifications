@@ -462,16 +462,12 @@ function registration_check_email_registered($email, $entity_type, $entity_bundl
 }
 
 /**
-<<<<<<< HEAD
  * Register button form callback.
  *
  * Shows a Register button for a registration enabled entity.
  *
  * If the user is already registered for this item, we instead show text to the
  * user that they are already registered.
-=======
- * Form builder for adding a Register button to an entity.
->>>>>>> fe11aee36658d556644fcef231963318ecae428d
  */
 function registration_register_form($form, &$form_state, $type, $bundle, $eid) {
   global $user;
@@ -504,20 +500,15 @@ function registration_register_form($form, &$form_state, $type, $bundle, $eid) {
 }
 
 /**
-<<<<<<< HEAD
  * Register button form submit.
  *
  * Loads up the complete registration form for the entity.
-=======
- * Register button form submit callback.
->>>>>>> fe11aee36658d556644fcef231963318ecae428d
  */
 function registration_register_form_submit($form, &$form_state) {
   drupal_goto('register/' . $form_state['values']['etype'] . '/' . $form_state['values']['bundle'] . '/' . $form_state['values']['eid']);
 }
 
 /**
-<<<<<<< HEAD
  * Registration form page title callback.
  */
 function registration_register_entity_title($type, $bundle, $entityid) {
@@ -526,10 +517,7 @@ function registration_register_entity_title($type, $bundle, $entityid) {
 }
 
 /**
- * Registration form callback.
-=======
  * Form builder for registering for an entity. Adds bundle's fields to the form.
->>>>>>> fe11aee36658d556644fcef231963318ecae428d
  */
 function registration_register_entity_form($form, &$form_state, $type, $bundle, $entityid) {
   $entity = variable_get('registration_' . $type . ':' . $bundle . '_bundle', FALSE);
@@ -565,8 +553,7 @@ function registration_register_entity_form($form, &$form_state, $type, $bundle, 
   }
   if (is_string($entity)) {
     $etype = $entity;
-<<<<<<< HEAD
-    $entity = entity_get_controller('registration')->create(array('type' => $entity));
+    $entity = entity_create('registration', array('type' => $entity));
     $entity->entity_type = $type;
     $entity->entity_bundle = $bundle;
     $entity->eid = $entityid;
@@ -590,10 +577,6 @@ function registration_register_entity_form($form, &$form_state, $type, $bundle, 
         '#value' => t('Submit'),
       ),
     );
-=======
-    $entity = entity_create('registration', array('type' => $entity));
-    field_attach_form($etype, $entity, $form, $form_state);
->>>>>>> fe11aee36658d556644fcef231963318ecae428d
     return $form;
   }
 }
