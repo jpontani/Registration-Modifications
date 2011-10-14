@@ -444,14 +444,13 @@ function registration_permission() {
  */
 function registration_entity_view_alter(&$build, $type) {
   $types_to_alter = array();
-  $types_to_alter_query = db_select('variable', 'v')->fields('v')->condition('name', 'registration_%_bundle', 'LIKE')->execute();
+  $types_to_alter_query = db_select('variable', 'v')->fields('v')->condition('name', 'registration_bundle:%', 'LIKE')->execute();
   foreach ($types_to_alter_query as $row) {
     $mtype = $row->name;
-    $mtype = substr($mtype, 13);
-    $mtype = substr($mtype, 0, -7);
+    $mtype = substr($mtype, 20);
     $types_to_alter[] = $mtype;
   }
-  if (in_array($type . ':' . $build['#bundle'], $types_to_alter)) {
+  if (in_array($type . ':_' . $build['#bundle'], $types_to_alter)) {
     // the type is in the types of entities to alter for registrations
     $build['registration_register_form'] = drupal_get_form('registration_register_form', $type, $build['#bundle'], $build['#node']->nid);
   }
