@@ -211,20 +211,20 @@ function registration_status_form($form, $form_state, $type, $bundle) {
 
   $form['type'] = array(
     '#type' => 'hidden',
-    '#value' => $type . ':' . $bundle,
+    '#value' => $type . ':_' . $bundle,
   );
 
   $form['status'] = array(
     '#type' => 'radios',
     '#title' => t('Status'),
-    '#default_value' => variable_get('registration_' . $type . ':' . $bundle . '_status', 0),
+    '#default_value' => variable_get('registration_status:' . $type . ':_' . $bundle, 0),
     '#options' => array('Disabled', 'Enabled'),
   );
   
   $form['registration_entity'] = array(
     '#type' => 'select',
     '#title' => t('Registration Type'),
-    '#default_value' => variable_get('registration_' . $type . ':' . $bundle . '_bundle', ''),
+    '#default_value' => variable_get('registration_bundle:' . $type . ':_' . $bundle, ''),
     '#options' => registration_bundle_options(),
   );
 
@@ -241,8 +241,8 @@ function registration_status_form($form, $form_state, $type, $bundle) {
  */
 function registration_status_form_submit($form, &$form_state) {
   $type = $form_state['values']['type'];
-  variable_set('registration_' . $type . '_bundle', $form_state['values']['registration_entity']);
-  variable_set('registration_' . $type . '_status', $form_state['values']['status']);
+  variable_set('registration_bundle:' . $type, $form_state['values']['registration_entity']);
+  variable_set('registration_status:' . $type, $form_state['values']['status']);
   drupal_set_message(t('Registration settings updated for @type.', array('@type' => $type)));
   drupal_goto('admin/structure/registration');
 }
@@ -628,8 +628,8 @@ function registration_admin_page() {
       );
       foreach ($data['bundles'] as $bundle => $bundle_data) {
         $link = $bundle_data['label'];
-        $status = variable_get('registration_' . $type . ':' . $bundle . '_status', 0);
-        $usingtype = variable_get('registration_' . $type . ':' . $bundle . '_bundle', '');
+        $status = variable_get('registration_status:' . $type . ':_' . $bundle, 0);
+        $usingtype = variable_get('registration_bundle:' . $type . ':_' . $bundle, '');
         $status = ($status ? 'Enabled' : 'Disabled');
         $status = l($status, 'admin/structure/registration/status/' . $type . '/' . $bundle) . ($status == 'Enabled' ? ' <small>(' . $usingtype . ')</small>' : '');
         if (!empty($bundle_data['admin'])) {
@@ -686,21 +686,29 @@ function registration_form_node_type_form_alter(&$form, &$form_state) {
     '#collapsed' => FALSE,
   );
 
-  $form['registration']['registration_node_status'] = array(
+  $form['registration']['registration_status:node:'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable registrations for this content type'),
-    '#default_value' => variable_get('registration_node_status_' . $type, 0),
+    '#default_value' => variable_get('registration_status:node:_' . $type, 0),
     '#description' => t('If enabled, users will be allowed to register for this 
 			content type unless an administrator disbles registrations on specific 
 			posts.'),
+  );
+  $form['registration']['registration_bundle:node:'] = array(
+    '#type' => 'select',
+    '#title' => t('Registration Type'),
+    '#default_value' => variable_get('registration_bundle:node:_' . $type, ''),
+    '#options' => registration_bundle_options(),
   );
 }
 
 /**
  * Implements hook_node_type_delete().
+ * @todo Delete registrations that belong to this node type.
  */
 function registration_node_type_delete($info) {
-  variable_del('registration_node_status' . $info->type);
+  variable_del('registration_status:node:_' . $info->type);
+  variable_del('registration_bundle:node:_' . $info->type);
 }
 
 /**
@@ -708,7 +716,7 @@ function registration_node_type_delete($info) {
  */
 function registration_register_page_access($node) {
   $ret = FALSE;
-  if (variable_get('registration_node_status_' . $node->type, 0)) {
+  if (variable_get('registration_status:node:_' . $node->type, 0)) {
     if (user_access('administer registration') || user_access('add registration')) {
       $settings = registration_node_settings($node->nid);
       if ($settings['status']) {
@@ -725,7 +733,7 @@ function registration_register_page_access($node) {
  */
 function registration_administer_registrations_access($node) {
   $ret = FALSE;
-  if (variable_get('registration_node_status_' . $node->type, 0)) {
+  if (variable_get('registration_status:node:_' . $node->type, 0)) {
     if (user_access('administer registration')) {
       $ret = TRUE;
     }
@@ -739,7 +747,7 @@ function registration_administer_registrations_access($node) {
  */
 function registration_register_page($node) {
   if (registration_has_room($node->nid)) {
-    $registration = entity_get_controller('registration')->create(array('type' => 'registration'));
+    $registration = entity_create('registration', array('type' => 'registration'));
     $registration->nid = $node->nid;
     return drupal_get_form('registration_form', $registration);
   }
@@ -870,7 +878,7 @@ function registration_entity_delete($entity, $type) {
  * Deletes registrations and settings for this node.
  */
 function registration_node_delete($node) {
-  db_delete('registration')->condition('nid', $node->nid)->execute();
+  db_delete('registration')->condition('entity_type', 'node')->condition('type', $node->type)->condition('eid', $node->nid)->execute();
   db_delete('registration_node')->condition('nid', $node->nid)->execute();
 }
 
