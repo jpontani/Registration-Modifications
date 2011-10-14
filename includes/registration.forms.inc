@@ -10,22 +10,12 @@
 function registration_form($form, &$form_state, $registration) {
   $form_state['registration'] = $registration;
 
-	// default email from existing registraiton or authenticted user
-  global $user;
-	$mail = '';
-	if (isset($registration->registration_id)) {
-		$mail = $registration->mail;
-	}
-	else if ($user->uid) {
-		$mail = $user->mail;
-	}
-
   global $user;
   $form['mail'] = array(
     '#type' => 'textfield',
     '#title' => t('Email'),
     '#description' => t('The email to associate with this registration.'),
-    '#default_value' => $mail,
+    '#default_value' => $user->uid ? $user->mail : '',
     '#size' => 40,
     '#maxlength' => 255,
     '#required' => TRUE,
@@ -61,7 +51,14 @@ function registration_form($form, &$form_state, $registration) {
   );
 
   // add a delete button for existing registration
-  if (isset($registration->registration_id) &&
+  if (isset($registration->registration_id)) {
+    $form['actions']['delete'] = array(
+      '#type' => 'submit',
+      '#value' => t('Delete'),
+    );
+  }
+
+  if (!empty($registration->registration_id) &&
     user_access('administer registration')
   ) {
     $form['actions']['delete'] = array(
@@ -97,16 +94,11 @@ function registration_form_validate($form, &$form_state) {
   }
 	// check for duplicate registrations
 	else {
-		$query = db_select('registration', 'r')
-			->condition('nid', $registration->nid)
-			->condition('mail', $form_state['values']['mail']);
-		
-		// exclude existing registration
-		if (isset($registration->registration_id)) {
-			$query->condition('registration_id', $registration->registration_id, '<>');
-		}
-
-		$count = $query->countQuery()->execute()->fetchField();		
+		$count = db_query('SELECT count(nid) FROM {registration} WHERE nid = :nid AND mail = :mail', 
+			array(
+				':nid' => $registration->nid,
+				':mail' => $form_state['values']['mail']
+			))->fetchField();
 		if ($count > 0) {
 			form_set_error('mail', t('%mail is already registered for this event.', 
 				array('%mail' => $form_state['values']['mail'])));
@@ -378,7 +370,7 @@ function registration_registrations_settings_form_submit($form, &$form_state) {
   $fields = array(
     'status' => $form_state['values']['status'], 
     'capacity' => $form_state['values']['capacity'], 
-		'send_reminder' => $form_state['values']['send_reminder'],
+		'send_confirmation' => $form_state['values']['send_reminder'],
 		'settings' => serialize($form_state['values']['settings']),
   );
 	if ($form_state['values']['send_reminder']) {
