@@ -457,7 +457,7 @@ function registration_entity_view_alter(&$build, $type) {
 }
 
 function registration_check_email_registered($email, $entity_type, $entity_bundle, $entity_id) {
-  return TRUE;
+  return FALSE;
 }
 
 /**
@@ -519,8 +519,8 @@ function registration_register_entity_title($type, $bundle, $entityid) {
  * Form builder for registering for an entity. Adds bundle's fields to the form.
  */
 function registration_register_entity_form($form, &$form_state, $type, $bundle, $entityid) {
-  $entity = variable_get('registration_' . $type . ':' . $bundle . '_bundle', FALSE);
-  $status = (int) variable_get('registration_' . $type . ':' . $bundle . '_status', 0);
+  $entity = variable_get('registration_bundle:' . $type . ':_' . $bundle, FALSE);
+  $status = (int) variable_get('registration_status:' . $type . ':_' . $bundle, 0);
   $form = array();
   $form['entity_type'] = array(
     '#type' => 'hidden',
@@ -552,7 +552,7 @@ function registration_register_entity_form($form, &$form_state, $type, $bundle, 
   }
   if (is_string($entity)) {
     $etype = $entity;
-    $entity = entity_create('registration', array('type' => $entity));
+    $entity = entity_create('registration', array('type' => $etype));
     $entity->entity_type = $type;
     $entity->entity_bundle = $bundle;
     $entity->eid = $entityid;
@@ -564,7 +564,6 @@ function registration_register_entity_form($form, &$form_state, $type, $bundle, 
       '#type' => 'value',
       '#value' => $entity,
     );
-    field_attach_form('registration', $entity, $form['registration'], $form_state);
     $form['actions'] = array(
       '#type' => 'actions',
       'cancel' => array(
@@ -576,6 +575,7 @@ function registration_register_entity_form($form, &$form_state, $type, $bundle, 
         '#value' => t('Submit'),
       ),
     );
+    field_attach_form('registration', $entity, $form['registration'], $form_state);
     return $form;
   }
 }
@@ -589,6 +589,7 @@ function registration_register_entity_form_validate($form, &$form_state) {
   $entitybundle = $form_state['values']['entity_bundle'];
   $registration = $form_state['values']['entity'];
   field_attach_form_validate('registration', $registration, $form, $form_state);
+  return TRUE;
 }
 
 /**
@@ -605,8 +606,8 @@ function registration_register_entity_form_submit($form, &$form_state) {
   $registration->user_uid = $user->uid;
   $registration->author_uid = $user->uid;
   $registration->status = 1;
-  $registration->save();
-  field_attach_submit('registration', $registration, $form, $form_state);
+  entity_save('registration', $registration);
+  field_attach_submit('registration', $registration, $form['registration'], $form_state);
   drupal_set_message(t('Your registration has been received.'));
   drupal_goto($entitytype . '/' . $entityid);
 }
