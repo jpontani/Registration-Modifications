@@ -16,17 +16,22 @@ function registration_type_form($form, &$form_state, $type = NULL) {
   $desc = '';
   $op = 'new';
   $mtype = FALSE;
+  $form = array();
+
   if (is_string($type)) {
     $mtype = registration_type_load($type);
   }
+
   if ($mtype) {
     $name = $mtype->name;
     $machine = $mtype->type;
     $desc = $mtype->description;
     $op = 'edit';
+    $form['bundle_old'] = array(
+      '#type' => 'hidden',
+      '#value' => $machine,
+    );
   }
-
-  $form = array();
 
   $form['pop'] = array(
     '#type' => 'hidden',
@@ -77,11 +82,13 @@ function registration_type_form_submit($form, $form_state) {
     case 'new':
       $ret = drupal_write_record('registration_type', $record);
       $msg = t(' created.');
+      field_attach_create_bundle('registration', $form_state['values']['bundle']);
       break;
     case 'edit':
       unset($record->created);
       $ret = drupal_write_record('registration_type', $record, array('type'));
       $msg = t(' updated.');
+      field_attach_rename_bundle('registration', $form_state['values']['bundle_old'], $form_state['values']['bundle']);
       break;
   }
   entity_info_cache_clear();
@@ -103,6 +110,10 @@ function registration_entity_type_exists($type) {
 
 /**
  * Delete form callback.
+ *
+ * @todo Delete all registrations of that type.
+ * @todo Delete all variables that have this type as the registration entity.
+ * @todo Delete all fields associated with only this entity.
  */
 function registration_delete_type($type) {
   return "Delete $type";
@@ -342,6 +353,53 @@ function registration_menu() {
     'file' => 'includes/registration.forms.inc',
   );
 
+  // node local tasks
+  $items['node/%node/register'] = array(
+    'title' => 'Register',
+    'page callback' => 'registration_register_page',
+    'page arguments' => array(1),
+    'access callback' => 'registration_register_page_access',
+    'access arguments' => array(1),
+    'file' => 'includes/registration.forms.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['node/%node/registrations'] = array(
+    'title' => 'Manage Registrations',
+    'page callback' => 'registration_registrations_page',
+    'page arguments' => array(1),
+    'access callback' => 'registration_administer_registrations_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['node/%node/registrations/list'] = array(
+    'title' => 'Registrations',
+    'page callback' => 'registration_registrations_page',
+    'page arguments' => array(1),
+    'access callback' => 'registration_administer_registrations_access',
+    'access arguments' => array(1),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['node/%node/registrations/settings'] = array(
+    'title' => 'Settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('registration_registrations_settings_form', 1),
+    'access callback' => 'registration_administer_registrations_access',
+    'access arguments' => array(1),
+    'file' => 'includes/registration.forms.inc',
+    'weight' => 9,
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['node/%node/registrations/broadcast'] = array(
+    'title' => 'Email Registrants',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('registration_registrations_broadcast_form', 1),
+    'access callback' => 'registration_administer_registrations_access',
+    'access arguments' => array(1),
+    'file' => 'includes/registration.forms.inc',
+    'weight' => 10,
+    'type' => MENU_LOCAL_TASK,
+  );
+
   return $items;
 }
 
@@ -349,21 +407,41 @@ function registration_menu() {
  * Implements hook_permission().
  */
 function registration_permission() {
-  return array(
+  $perms = array(
     'administer registration' => array(
       'title' => t('Administer registration'),
       'description' => t('Perform administration tasks for Registrations.'),
       'restrict access' => TRUE,
     ),
-    'view registration' => array(
-      'title' => t('View registrations'),
+    'view any registration' => array(
+      'title' => t('View any registration'),
     ),
-    'add registration' => array(
-      'title' => t('Add registrations'),
+    'add any registration' => array(
+      'title' => t('Add any registration'),
     ),
   );
+
+  foreach (registration_entity_types() as $type => $info) {
+    $perms['create ' . $type . ' registration'] = array(
+      'title' => t('Create <em> ') . $info->name . t('</em> registrations'),
+    );
+    $perms['edit ' . $type . ' registration'] = array(
+      'title' => t('Edit <em> ') . $info->namee . t('</em> registrations'),
+    );
+    $perms['delete ' . $type . ' registration'] = array(
+      'title' => t('Delete <em> ') . $info->name . t('</em> registrations'),
+    );
+    $perms['view ' . $type . ' registration'] = array(
+      'title' => t('View <em> ') . $info->name . t('</em> registrations'),
+    );
+  }
+
+  return $perms;
 }
 
+/**
+ * Implements hook_entity_view_alter().
+ */
 function registration_entity_view_alter(&$build, $type) {
   $types_to_alter = array();
   $types_to_alter_query = db_select('variable', 'v')->fields('v')->condition('name', 'registration_%_bundle', 'LIKE')->execute();
@@ -384,12 +462,16 @@ function registration_check_email_registered($email, $entity_type, $entity_bundl
 }
 
 /**
+<<<<<<< HEAD
  * Register button form callback.
  *
  * Shows a Register button for a registration enabled entity.
  *
  * If the user is already registered for this item, we instead show text to the
  * user that they are already registered.
+=======
+ * Form builder for adding a Register button to an entity.
+>>>>>>> fe11aee36658d556644fcef231963318ecae428d
  */
 function registration_register_form($form, &$form_state, $type, $bundle, $eid) {
   global $user;
@@ -422,15 +504,20 @@ function registration_register_form($form, &$form_state, $type, $bundle, $eid) {
 }
 
 /**
+<<<<<<< HEAD
  * Register button form submit.
  *
  * Loads up the complete registration form for the entity.
+=======
+ * Register button form submit callback.
+>>>>>>> fe11aee36658d556644fcef231963318ecae428d
  */
 function registration_register_form_submit($form, &$form_state) {
   drupal_goto('register/' . $form_state['values']['etype'] . '/' . $form_state['values']['bundle'] . '/' . $form_state['values']['eid']);
 }
 
 /**
+<<<<<<< HEAD
  * Registration form page title callback.
  */
 function registration_register_entity_title($type, $bundle, $entityid) {
@@ -440,6 +527,9 @@ function registration_register_entity_title($type, $bundle, $entityid) {
 
 /**
  * Registration form callback.
+=======
+ * Form builder for registering for an entity. Adds bundle's fields to the form.
+>>>>>>> fe11aee36658d556644fcef231963318ecae428d
  */
 function registration_register_entity_form($form, &$form_state, $type, $bundle, $entityid) {
   $entity = variable_get('registration_' . $type . ':' . $bundle . '_bundle', FALSE);
@@ -475,6 +565,7 @@ function registration_register_entity_form($form, &$form_state, $type, $bundle, 
   }
   if (is_string($entity)) {
     $etype = $entity;
+<<<<<<< HEAD
     $entity = entity_get_controller('registration')->create(array('type' => $entity));
     $entity->entity_type = $type;
     $entity->entity_bundle = $bundle;
@@ -499,6 +590,10 @@ function registration_register_entity_form($form, &$form_state, $type, $bundle, 
         '#value' => t('Submit'),
       ),
     );
+=======
+    $entity = entity_create('registration', array('type' => $entity));
+    field_attach_form($etype, $entity, $form, $form_state);
+>>>>>>> fe11aee36658d556644fcef231963318ecae428d
     return $form;
   }
 }
@@ -648,7 +743,7 @@ function registration_register_page_access($node) {
 function registration_administer_registrations_access($node) {
   $ret = FALSE;
   if (variable_get('registration_node_status_' . $node->type, 0)) {
-    if (user_access('administer mkc_registration')) {
+    if (user_access('administer registration')) {
       $ret = TRUE;
     }
   }
@@ -674,10 +769,28 @@ function registration_register_page($node) {
  * Page callback for viewing registrations
  */
 function registration_registrations_page($node) {
+	$header = array(
+		array('data' => t('id'), 'field' => 'registration_id', 'type' => 'property', 
+				'specifier' => 'registration_id'),
+		array('data' => t('Email'), 'field' => 'mail', 'type' => 'property', 
+				'specifier' => 'mail'),
+		array('data' => t('Created By'), 'field' => 'author_uid', 
+				'type' => 'property', 'specifier' => 'author_uid'),
+		array('data' => t('Count'), 'field' => 'count', 'type' => 'property', 
+				'specifier' => 'count'),
+		array('data' => t('Created'), 'field' => 'created', 'sort' => 'desc', 
+				'type' => 'property', 'specifier' => 'created'),
+		array('data' => t('Actions')),
+	);
+	
   $query = new EntityFieldQuery;
-  $query->entityCondition('entity_type', 'registration')->propertyCondition('nid', $node->nid);
-  $result = $query->execute();
-
+  $result = $query
+		->entityCondition('entity_type', 'registration')
+		->propertyCondition('nid', $node->nid)
+		->pager(20)
+		->tableSort($header)
+		->execute();
+		
   if (!empty($result['registration'])) {
     $registrations = registration_load_multiple(array_keys($result['registration']));
 
@@ -703,14 +816,24 @@ function registration_registrations_page($node) {
       );
     }
 
+		$settings = registration_node_settings($node->nid);
+				
     $table = array(
-      'header' => array(t('id'), t('Email'), t('Created By'), t('Count'), t('Created'), t('Actions')),
+      'header' => $header,
       'rows' => $rows,
+			'caption' => t('List of registrations for %title. !count of !capacity slots are filled.', 
+				array(
+					'%title' => $node->title,
+ 					'!count' => '<strong>' . registration_event_count($node->nid) . '</strong>', 
+					'!capacity' => '<strong>' . $settings['capacity'] . '</strong>'
+				))
     );
-    $out = theme('table', $table);
+
+    $out = theme('table', $table) . theme('pager');
   }
   else {
-    $out = t('There are no registratrants for %name', array('%name' => $node->title));
+    $out = t('There are no registratrants for %name', 
+				array('%name' => $node->title));
   }
 
   return $out;
@@ -741,10 +864,12 @@ function registration_has_room($nid) {
  * @return int
  */
 function registration_event_count($nid) {
-	// @TODO: Add static variable
-  $count = db_query("SELECT sum(nid*count) FROM {registration} WHERE nid = :nid",
-    array(':nid' => $nid)
-  )->fetchField();
+	$count = &drupal_static(__FUNCTION__, FALSE);
+	if (!$count) {
+	  $count = db_query("SELECT sum(count) FROM {registration} WHERE nid = :nid",
+	    array(':nid' => $nid)
+	  )->fetchField();		
+	}
   return $count;
 }
 
@@ -854,43 +979,46 @@ function registration_send_broadcast($node, $subject, $message) {
   if (!empty($entities)) {
     $recipients = array();
 
-    // load registrations and build an array of recipients
-    $registrations = registration_load_multiple(
-      array_keys($entities['registration'])
-    );
-    foreach ($registrations as $registration) {
-      $recipients[] = $registration->mail;
-    }
-
-    // send the email and communicate results
     $params = array(
       'subject' => $subject,
       'message' => $message,
     );
-    $result = drupal_mail('registration', 'broadcast',
-      implode(', ', $recipients), $language, $params, $from
+
+    // load registrations and build an array of recipients
+    $registrations = registration_load_multiple(
+      array_keys($entities['registration'])
     );
-    if ($result['result']) {
-      drupal_set_message(t('The message has been sent to @count registrants.',
-        array('@count' => count($recipients))
-      ));
-			watchdog('registration', 'Registration email sent to @count registrants.',
-				array('@count' => count($recipients))
-			);
+
+    // send the email to each registrant and communicate results
+		$success_count = 0;
+    foreach ($registrations as $registration) {
+      $recipients[] = $registration->mail;
+	    $result = drupal_mail('registration', 'broadcast',
+	      $registration->mail, $language, $params, $from
+	    );
+    	if ($result['result']) {
+				$success_count++;
+			}
+			else {
+				watchdog('registration', 'Failed to send registration broadcast email to %email.',
+					array('%email' => $registration->mail), 'WATCHDOG_ERROR'
+				);
+			}
     }
-    else {
-      drupal_set_message(
-        t('There was an error sending the message.'),
-        $type = 'error'
-      );
-			watchdog('registration', 'Failed to send registration broadcast email.',
-				array(), 'WATCHDOG_ERROR'
+
+    if ($success_count) {
+      drupal_set_message(t('Registration broadcast sent to @count registrants.',
+        array('@count' => $success_count)
+      ));
+			watchdog('registration', 'Registration broadcast sent to @count registrants.',
+				array('@count' => $success_count)
 			);
     }
   }
   else {
     drupal_set_message(
-      t('There are no participants registered for this %type.', array('%type' => $node->type)),
+      t('There are no participants registered for this %type.', 
+					array('%type' => $node->type)),
       $type = 'warning'
     );
   }
@@ -926,12 +1054,13 @@ function registration_cron_nope() {
 		->fields('rn')
 		->condition('send_reminder', 1)
 		->condition('reminder_date', date('Y-m-d 00:00:00'))
+		->range(0, 10)
 		->execute()
-		->fetchAssoc();
+		->fetchAllAssoc('nid');
 
 	foreach ($results as $result) {
-		$node = node_load($result['nid']);
-		$message = $result['message'];
+		$node = node_load($result->nid);
+		$message = $result->reminder_template;
 		if (module_exists('token')) {
 			$message = token_replace($message, array('node' => $node));
 		}

@@ -195,4 +195,3 @@ function registration_schema() {
 
   return $schema;
 }
-

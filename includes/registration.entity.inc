@@ -35,7 +35,7 @@ function registration_entity_info() {
       'token type' => 'registration',
     ),
   );
-  
+
   foreach (registration_entity_types() as $type => $info) {
     $entities['registration']['bundles'][$type] = array(
       'label' => $info->name,
@@ -45,7 +45,7 @@ function registration_entity_info() {
       ),
     );
   }
-  
+
   return $entities;
 }
 
@@ -208,3 +208,27 @@ function registration_save($registration) {
   return entity_get_controller('registration')->save($registration);
 }
 
+/**
+ * Implements hook_field_extra_fields().
+ */
+function registration_field_extra_fields() {
+	// expose the email property on the fields and display settings forms.
+  $extra['registration']['registration'] = array(
+    'form' => array(
+      'mail' => array(
+        'label' => t('Email'),
+        'description' => t('Registrant\'s email address.'),
+        'weight' => 0,
+      ),
+    ),
+    'display' => array(
+      'mail' => array(
+        'label' => t('Email'),
+        'description' => t('Registrant\'s email address.'),
+        'weight' => 0,
+      ),
+    )
+  );
+
+  return $extra;
+}
