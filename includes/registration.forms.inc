@@ -370,7 +370,7 @@ function registration_registrations_settings_form_submit($form, &$form_state) {
   $fields = array(
     'status' => $form_state['values']['status'], 
     'capacity' => $form_state['values']['capacity'], 
-		'send_confirmation' => $form_state['values']['send_reminder'],
+		'send_reminder' => $form_state['values']['send_reminder'],
 		'settings' => serialize($form_state['values']['settings']),
   );
 	if ($form_state['values']['send_reminder']) {

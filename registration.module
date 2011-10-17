@@ -200,6 +200,8 @@ function registration_menu_alter(&$items) {
   foreach (registration_entity_types() as $type => $info) {
     $items['admin/structure/registration/types/' . $type . '/manage/fields']['context'] = MENU_CONTEXT_INLINE;
     $items['admin/structure/registration/types/' . $type . '/manage/display']['context'] = MENU_CONTEXT_INLINE;
+    $items['admin/structure/registration/types/' . $type . '/manage/display/full']['context'] = MENU_CONTEXT_PAGE;
+    $items['admin/structure/registration/types/' . $type . '/manage/display/teaser']['context'] = MENU_CONTEXT_PAGE;
   }
 }
 
@@ -777,7 +779,9 @@ function registration_registrations_page($node) {
   $query = new EntityFieldQuery;
   $result = $query
 		->entityCondition('entity_type', 'registration')
-		->propertyCondition('nid', $node->nid)
+		->propertyCondition('eid', $node->nid)
+		->propertyCondition('entity_type', 'node')
+		->propertyCondition('entity_bundle', $node->type)
 		->pager(20)
 		->tableSort($header)
 		->execute();
@@ -797,9 +801,11 @@ function registration_registrations_page($node) {
 				l('Edit', 'registration/' . $registration->registration_id . '/edit'),
 				l('Delete', 'registration/' . $registration->registration_id . '/delete'),
 			);
+			$email = entity_metadata_wrapper('registration', $registration);
+			$email = $email->field_email->value();
       $rows[] = array(
         l($registration->registration_id, 'registration/' . $registration->registration_id),
-        l($registration->mail, 'mailto:' . $registration->mail),
+        l($email, 'mailto:' . $email),
         $author,
         $registration->count,
         format_date($registration->created),
@@ -857,7 +863,7 @@ function registration_has_room($nid) {
 function registration_event_count($nid) {
 	$count = &drupal_static(__FUNCTION__, FALSE);
 	if (!$count) {
-	  $count = db_query("SELECT sum(count) FROM {registration} WHERE nid = :nid",
+	  $count = db_query("SELECT sum(count) FROM {registration} WHERE eid = :nid",
 	    array(':nid' => $nid)
 	  )->fetchField();		
 	}
