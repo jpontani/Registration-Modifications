@@ -428,7 +428,7 @@ function registration_permission() {
       'title' => t('Create <em> ') . $info->name . t('</em> registrations'),
     );
     $perms['edit ' . $type . ' registration'] = array(
-      'title' => t('Edit <em> ') . $info->namee . t('</em> registrations'),
+      'title' => t('Edit <em> ') . $info->name . t('</em> registrations'),
     );
     $perms['delete ' . $type . ' registration'] = array(
       'title' => t('Delete <em> ') . $info->name . t('</em> registrations'),
@@ -667,10 +667,9 @@ function registration_page_view($registration, $view_mode = 'full') {
  * Page title callback.
  */
 function registration_page_title($registration) {
-  // use the node title in the registration page title
-  if ($node = node_load($registration->nid)) {
-    return t('Registration for @title', array('@title' => $node->title));
-  }
+  $entity = entity_load($registration->entity_type, array($registration->eid));
+  $entity = $entity[$registration->eid];
+  return t('Registration #@num for @entity', array('@num' => $registration->registration_id, '@entity' => $entity->title));
 }
 
 /**
@@ -932,12 +931,11 @@ function registration_theme() {
  */
 function theme_registration($variables) {
   $registration = $variables['registration'];
-  $output = '<div><label>' . t('Email') . '</label>' . $registration->mail . '</div>';
-  if ($node = node_load($registration->nid)) {
-    $output .= '<div><label>' . $node->type . "</label>" . l($node->title, 'node/' . $registration->nid) . '</div>';
-  }
+  //if ($node = node_load($registration->nid)) {
+  //  $output .= '<div><label>' . $node->type . "</label>" . l($node->title, 'node/' . $registration->nid) . '</div>';
+  //}
 
-  $output .= '<div><label>' . t('Count') . '</label>' . $registration->count . '</div>';
+  $output = '<div><label>' . t('Count') . '</label>' . $registration->count . '</div>';
   $output .= '<div><label>' . t('Created') . '</label>' . format_date($registration->created) . '</div>';
 
   return $output;
