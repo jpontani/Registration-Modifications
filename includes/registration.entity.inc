@@ -40,7 +40,7 @@ function registration_entity_info() {
     $entities['registration']['bundles'][$type] = array(
       'label' => $info->name,
       'admin' => array(
-        'path' => 'admin/structure/registration/types/' . $info->type . '/manage',
+        'path' => 'admin/structure/registration/types/manage/' . $info->type,
         'access arguments' => array('administer registration'),
       ),
     );
@@ -51,7 +51,7 @@ function registration_entity_info() {
 
 function registration_uri($registration) {
   return array(
-    'path' => 'registration/' . $registration->id,
+    'path' => 'registration/' . $registration->registration_id,
   );
 }
 

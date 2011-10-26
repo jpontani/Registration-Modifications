@@ -15,10 +15,8 @@ module_load_include('inc', 'registration', 'includes/registration.entity');
  */
 function registration_menu_alter(&$items) {
   foreach (registration_entity_types() as $type => $info) {
-    $items['admin/structure/registration/types/' . $type . '/manage/fields']['context'] = MENU_CONTEXT_INLINE;
-    $items['admin/structure/registration/types/' . $type . '/manage/display']['context'] = MENU_CONTEXT_INLINE;
-    $items['admin/structure/registration/types/' . $type . '/manage/display/full']['context'] = MENU_CONTEXT_PAGE;
-    $items['admin/structure/registration/types/' . $type . '/manage/display/teaser']['context'] = MENU_CONTEXT_PAGE;
+    $items['admin/structure/registration/types/manage/' . $type . '/fields']['context'] = MENU_CONTEXT_INLINE;
+    $items['admin/structure/registration/types/manage/' . $type . '/display']['context'] = MENU_CONTEXT_INLINE;
   }
 }
 
@@ -66,15 +64,14 @@ function registration_menu() {
     'access arguments' => array('administer registration'),
     'file' => 'includes/registration.admin.inc',
   );
-  $items['admin/structure/registration/types/%/edit'] = array(
-    'title' => 'edit',
+  $items['admin/structure/registration/types/manage/%'] = array(
     'title callback' => 'registration_admin_form_title',
-    'title arguments' => array(4, 'Edit'),
+    'title arguments' => array(5, 'Edit'),
+    'file' => 'includes/registration.admin.inc',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('registration_type_form', 4),
+    'page arguments' => array('registration_type_form', 5),
     'access arguments' => array('administer registration'),
     'type' => MENU_CALLBACK,
-    'file' => 'includes/registration.admin.inc',
   );
   $items['admin/structure/registration/types/%/delete'] = array(
     'title' => 'delete',
@@ -253,6 +250,9 @@ function registration_page_title($registration) {
  * Add registration options to node type form.
  */
 function registration_form_node_type_form_alter(&$form, &$form_state) {
+  if (!function_exists('registration_bundle_options')) {
+    module_load_include('inc', 'registration', 'includes/registration.admin');
+  }
   $type = $form['#node_type']->type;
 
   $form['registration'] = array(

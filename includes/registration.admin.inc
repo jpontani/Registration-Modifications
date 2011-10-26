@@ -14,15 +14,15 @@ function registration_types_page() {
     $links = array(
       'edit' => array(
         'title' => 'edit',
-        'href' => 'admin/structure/registration/types/' . $type . '/edit',
+        'href' => 'admin/structure/registration/types/manage/' . $type,
       ),
       'manage fields' => array(
         'title' => 'manage fields',
-        'href' => 'admin/structure/registration/types/' . $type . '/manage/fields',
+        'href' => 'admin/structure/registration/types/manage/' . $type . '/fields',
       ),
       'manage display' => array(
         'title' => 'manage display',
-        'href' => 'admin/structure/registration/types/' . $type . '/manage/display',
+        'href' => 'admin/structure/registration/types/manage/' . $type . '/display',
       ),
       'delete' => array(
         'title' => 'delete',
