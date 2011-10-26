@@ -653,3 +653,24 @@ function registration_theme() {
     ),
   );
 }
+
+/**
+ * Default settings for entity registration.
+ *
+ * @return
+ *  Array of default settings for a new entity registration association.
+ */
+function registration_default_settings() {
+  return array(
+    'capacity' => 0,
+    'status' => 1,
+    // unix timestamp of the closing date, default to one month from now
+    'close_date' => strtotime('now +1 month'),
+    'reminder' => 1,
+    // reminder_time is set in minutes prior to closing date of registrations
+    // we default 2 reminders to one week and 2 days prior to close
+    'reminder_time' => array(7*24*60, 2*24*60),
+    'notify' => 0,
+    'notify_email' => array(),
+  );
+}

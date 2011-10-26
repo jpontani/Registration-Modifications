@@ -193,5 +193,41 @@ function registration_schema() {
     'primary key' => array('type'),
   );
 
+  $schema['registration_attach'] = array(
+    'description' => 'Registration bundles associated to specific entities.',
+    'fields' => array(
+      'entity_id' => array(
+        'description' => 'Entity ID our registration bundle is attached to.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'entity_type' => array(
+        'description' => 'Entity type our registration bundle is attached to.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'entity_bundle' => array(
+        'description' => 'Entity bundle our registration bundle is attached to.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'reg_bundle' => array(
+        'description' => 'The registration bundle we are attaching.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'settings' => array(
+        'description' => 'Serialized object of our registration settings.',
+        'type' => 'text',
+        'size' => 'large',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('entity_id', 'entity_type', 'entity_bundle'),
+  );
+
   return $schema;
 }
