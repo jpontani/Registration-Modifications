@@ -97,8 +97,8 @@ function registration_schema() {
       ),
     ),
     'unique keys' => array(
-      'nid_mail' => array('nid', 'mail'), 
-    ), 
+      'nid_mail' => array('nid', 'mail'),
+    ),
     'primary key' => array('registration_id'),
   );
 
@@ -140,7 +140,7 @@ function registration_schema() {
         'type' => 'text',
         'size' => 'big',
         'not null' => FALSE,
-      ),  
+      ),
       'settings' => array(
         'type' => 'blob',
         'not null' => TRUE,

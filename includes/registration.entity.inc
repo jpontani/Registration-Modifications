@@ -113,7 +113,7 @@ function registration_entity_types() {
   if (empty($types)) {
     // types array is empty, so lets load it
     $types = array();
-    
+
     $tq = db_select('registration_type', 'rt')->fields('rt')->execute();
     foreach ($tq as $row) {
       $types[$row->type] = $row;

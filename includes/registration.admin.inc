@@ -34,7 +34,7 @@ function registration_types_page() {
       theme('links', array('links' => $links, 'attributes' => array('class' => 'links inline operations'))),
     );
   }
-  
+
   if (empty($rows)) {
     $rows[] = array(
       array(
@@ -43,7 +43,7 @@ function registration_types_page() {
       ),
     );
   }
-  
+
   return theme('table', array('header' => $header, 'rows' => $rows));
 }
 
@@ -163,13 +163,13 @@ function registration_type_form_submit($form, $form_state) {
   switch ($op) {
     case 'new':
       $ret = drupal_write_record('registration_type', $record);
-      $msg = t(' created.');
+      $msg = ' ' . t('created.');
       field_attach_create_bundle('registration', $form_state['values']['bundle']);
       break;
     case 'edit':
       unset($record->created);
       $ret = drupal_write_record('registration_type', $record, array('type'));
-      $msg = t(' updated.');
+      $msg = ' ' . t('updated.');
       field_attach_rename_bundle('registration', $form_state['values']['bundle_old'], $form_state['values']['bundle']);
       break;
   }
@@ -313,7 +313,7 @@ function registration_status_form($form, $form_state, $type, $bundle) {
     '#default_value' => variable_get('registration_status:' . $type . ':_' . $bundle, 0),
     '#options' => array('Disabled', 'Enabled'),
   );
-  
+
   $form['registration_entity'] = array(
     '#type' => 'select',
     '#title' => t('Registration Type'),
