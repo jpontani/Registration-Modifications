@@ -64,9 +64,7 @@ class RegistrationEntityClass extends Entity {
     parent::__construct($values, 'registration');
   }
 
-  /**
-   * Override buildContent() to add registration properties.
-   */
+  // Override buildContent() to add registration properties.
   public function buildContent($view_mode = 'full', $langcode = NULL) {
     // invoke theme handler to return markup for registration properties
     $content['registration'] = array(
@@ -74,7 +72,7 @@ class RegistrationEntityClass extends Entity {
     );
 
     return entity_get_controller($this->entityType)
-			->buildContent($this, $view_mode, $langcode, $content);
+      ->buildContent($this, $view_mode, $langcode, $content);
   }
 }
 
@@ -212,7 +210,7 @@ function registration_save($registration) {
  * Implements hook_field_extra_fields().
  */
 function registration_field_extra_fields() {
-	// expose the email property on the fields and display settings forms.
+  // expose the email property on the fields and display settings forms.
   $extra['registration']['registration'] = array(
     'form' => array(
       'mail' => array(

@@ -21,7 +21,7 @@ function theme_registration_types($variables) {
  * Theme handler for registrations.
  *
  * @param array $variables
- * 	 Contains a complete registration object.
+ *  Contains a complete registration object.
  */
 function theme_registration($variables) {
   $registration = $variables['registration'];
