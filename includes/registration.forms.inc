@@ -5,166 +5,18 @@
  */
 
 /**
- * Register button form callback.
- *
- * Shows a Register button for a registration enabled entity.
- *
- * If the user is already registered for this item, we instead show text to the
- * user that they are already registered.
- */
-function registration_register_form($form, &$form_state, $type, $bundle, $eid) {
-  global $user;
-  $form = array();
-  if ($user->uid != 0 && registration_check_email_registered($user->mail, $type, $bundle, $eid)) {
-    return array(
-      'already' => array(
-        '#type' => 'markup',
-        '#markup' => '<small>* ' . t('You are already registered for this item.') . ' *</small>',
-      ),
-    );
-  }
-  $form['eid'] = array(
-    '#type' => 'hidden',
-    '#value' => $eid,
-  );
-  $form['etype'] = array(
-    '#type' => 'hidden',
-    '#value' => $type,
-  );
-  $form['bundle'] = array(
-    '#type' => 'hidden',
-    '#value' => $bundle,
-  );
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => 'Register',
-  );
-  return $form;
-}
-
-/**
- * Register button form submit.
- *
- * Loads up the complete registration form for the entity.
- */
-function registration_register_form_submit($form, &$form_state) {
-  drupal_goto('register/' . $form_state['values']['etype'] . '/' . $form_state['values']['bundle'] . '/' . $form_state['values']['eid']);
-}
-
-/**
- * Registration form page title callback.
- */
-function registration_register_entity_title($type, $bundle, $entityid) {
-  $entity = entity_load($type, array($entityid));
-  return t('Register for @title', array('@title' => $entity[$entityid]->title));
-}
-
-/**
- * Form builder for registering for an entity. Adds bundle's fields to the form.
- */
-function registration_register_entity_form($form, &$form_state, $type, $bundle, $entityid) {
-  $entity = variable_get('registration_bundle:' . $type . ':_' . $bundle, FALSE);
-  $status = (int) variable_get('registration_status:' . $type . ':_' . $bundle, 0);
-  $form = array();
-  $form['entity_type'] = array(
-    '#type' => 'hidden',
-    '#value' => $type,
-  );
-  $form['entity_bundle'] = array(
-    '#type' => 'hidden',
-    '#value' => $bundle,
-  );
-  $form['entity_id'] = array(
-    '#type' => 'hidden',
-    '#value' => $entityid,
-  );
-  if ($status == 0) {
-    $form += array(
-      'invalid' => array(
-        '#type' => 'markup',
-        '#markup' => t('This item is not accepting registrations at this time.'),
-      ),
-      'actions' => array(
-        '#type' => 'actions',
-        'goback' => array(
-          '#type' => 'button',
-          '#value' => t('Go Back'),
-        ),
-      ),
-    );
-    return $form;
-  }
-  if (is_string($entity)) {
-    $etype = $entity;
-    $entity = entity_create('registration', array('type' => $etype));
-    $entity->entity_type = $type;
-    $entity->entity_bundle = $bundle;
-    $entity->eid = $entityid;
-    $form['registration'] = array(
-      '#type' => 'fieldset',
-      '#title' => 'Registration Information',
-    );
-    $form['registration']['entity'] = array(
-      '#type' => 'value',
-      '#value' => $entity,
-    );
-    $form['actions'] = array(
-      '#type' => 'actions',
-      'cancel' => array(
-        '#type' => 'button',
-        '#value' => t('Cancel'),
-      ),
-      'submit' => array(
-        '#type' => 'submit',
-        '#value' => t('Submit Registration'),
-      ),
-    );
-    field_attach_form('registration', $entity, $form['registration'], $form_state);
-    return $form;
-  }
-}
-
-/**
- * Registration form validation callback.
- */
-function registration_register_entity_form_validate($form, &$form_state) {
-  $entityid = $form_state['values']['entity_id'];
-  $entitytype = $form_state['values']['entity_type'];
-  $entitybundle = $form_state['values']['entity_bundle'];
-  $registration = $form_state['values']['entity'];
-  field_attach_form_validate('registration', $registration, $form, $form_state);
-  return TRUE;
-}
-
-/**
- * Registration form submit callback.
- */
-function registration_register_entity_form_submit($form, &$form_state) {
-  global $user;
-  $entityid = $form_state['values']['entity_id'];
-  $entitytype = $form_state['values']['entity_type'];
-  $entitybundle = $form_state['values']['entity_bundle'];
-  $registration = $form_state['values']['entity'];
-  $registration->created = REQUEST_TIME;
-  $registration->updated = REQUEST_TIME;
-  $registration->user_uid = $user->uid;
-  $registration->author_uid = $user->uid;
-  $registration->status = 1;
-  entity_save('registration', $registration);
-  field_attach_submit('registration', $registration, $form['registration'], $form_state);
-  drupal_set_message(t('Your registration has been received.'));
-  drupal_goto($entitytype . '/' . $entityid);
-}
-
-/**
  * Form callback: create or edit a contact.
  *
  * @param $contact
  *   The contact object to edit or for a create form an empty contact object
  *   with only a contact type defined.
  */
-function registration_form($form, &$form_state, $registration) {
+function registration_form($form, &$form_state, $registration, $entity, $type) {
   $form_state['registration'] = $registration;
+  $form_state['entity'] = $entity;
+  $form_state['entity_type'] = $type;
+  
+  $data = entity_extract_ids($type, $entity);
 
   global $user;
   $form['mail'] = array(
@@ -177,7 +29,7 @@ function registration_form($form, &$form_state, $registration) {
     '#required' => TRUE,
   );
 
-  $settings  = registration_entity_settings($entity);
+  $settings  = registration_entity_settings($entity, $type);
   $capacity  = $settings['capacity'];
   $remaining = 20;
   if ($capacity) {
@@ -227,7 +79,7 @@ function registration_form($form, &$form_state, $registration) {
   $form['actions']['cancel'] = array(
     '#type' => 'link',
     '#title' => t('Cancel'),
-    '#href' => 'node/' . $registration->nid,
+    '#href' => 'node/' . $data[0],
   );
 
   return $form;
@@ -237,8 +89,10 @@ function registration_form($form, &$form_state, $registration) {
  * Validation callback for registration_form().
  */
 function registration_form_validate($form, &$form_state) {
+  $entity = $form_state['entity'];
+  $type = $form_state['entity_type'];
   $registration = $form_state['registration'];
-
+  $data = entity_extract_ids($type, $entity);
   // verify the event hasn't sold out
   if (!registration_has_room($entity)) {
     drupal_set_message(t('Sorry, this event has sold out during your registration.'));
@@ -248,13 +102,9 @@ function registration_form_validate($form, &$form_state) {
   if (!valid_email_address($form_state['values']['mail'])) {
     form_set_error('mail', t('The email address is invalid.'));
   }
-  // check for duplicate registrations
+  // @TODO check for duplicate registrations
   else {
-    $count = db_query('SELECT count(nid) FROM {registration} WHERE nid = :nid AND mail = :mail',
-      array(
-        ':nid' => $registration->nid,
-        ':mail' => $form_state['values']['mail']
-      ))->fetchField();
+    $count = 0;
     if ($count > 0) {
       form_set_error('mail', t('%mail is already registered for this event.',
         array('%mail' => $form_state['values']['mail'])));
@@ -269,7 +119,10 @@ function registration_form_validate($form, &$form_state) {
  * Submit callback for registration_form().
  */
 function registration_form_submit($form, &$form_state) {
+  $entity = $form_state['entity'];
+  $type = $form_state['entity_type'];
   $registration = $form_state['registration'];
+  $data = entity_extract_ids($type, $entity);
 
   // Set the contact's author uid
   global $user;
@@ -283,7 +136,7 @@ function registration_form_submit($form, &$form_state) {
   // Save the registration and redirect to the tour node.
   if (registration_save($registration)) {
     drupal_set_message(t('Thanks you, your registration has been recieved!'));
-    $form_state['redirect'] = 'node/' . $registration->nid;
+    $form_state['redirect'] = 'node/' . $data[0];
   }
   else {
     drupal_set_message(t('Sorry, there has been a problem submitting your registration.'));
@@ -387,16 +240,17 @@ function registration_registrations_broadcast_form_submit($form, &$form_state) {
  * @param array $form_state
  * @param object $node
  */
-function registration_registrations_settings_form($form, &$form_state, $node) {
-  $form_state['nid'] = $node->nid;
+function registration_registrations_settings_form($form, &$form_state, $entity, $type) {
+  $form_state['entity'] = $entity;
+  $form_state['entity_type'] = $type;
 
-  $settings = registration_entity_settings($node->nid);
-
+  $settings = registration_entity_settings($entity, $type);
+  
   $form['status'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable'),
     '#description' => t('Check to enable registrations for %name.',
-      array('%name' => $node->title)
+      array('%name' => $entity->title)
     ),
     '#default_value' => isset($settings['status']) ? $settings['status'] : -1,
   );
@@ -404,7 +258,7 @@ function registration_registrations_settings_form($form, &$form_state, $node) {
     '#type' => 'textfield',
     '#title' => t('Capacity'),
     '#description' => t('The maximum number of regsitrants for %name. Leave at 0
-         for no limit.', array('%name' => $node->title)),
+         for no limit.', array('%name' => $entity->title)),
     '#size' => 5,
     '#maxlength' => 10,
     '#required' => TRUE,
@@ -521,21 +375,82 @@ function registration_registrations_settings_form_validate($form, &$form_state) 
  * @param array $form_state
  */
 function registration_registrations_settings_form_submit($form, &$form_state) {
-  $nid = $form_state['nid'];
+  $entity = $form_state['entity'];
+  $type = $form_state['entity_type'];
+  $data = entity_extract_ids($type, $entity);
   $fields = array(
-    'status' => $form_state['values']['status'],
-    'capacity' => $form_state['values']['capacity'],
-    'send_reminder' => $form_state['values']['send_reminder'],
-    'settings' => serialize($form_state['values']['settings']),
+    'entity_id' => $data[0],
+    'entity_type' => $type,
+    'entity_bundle' => $data[2],
+    'settings' => array(
+      'status' => $form_state['values']['status'],
+      'capacity' => $form_state['values']['capacity'],
+      'send_reminder' => $form_state['values']['send_reminder'],
+    ) + $form_state['values']['settings'],
   );
   if ($form_state['values']['send_reminder']) {
-    $fields['reminder_date'] = $form_state['values']['reminder_date']['year']
+    $fields['settings']['reminder_date'] = $form_state['values']['reminder_date']['year']
       . '-' . $form_state['values']['reminder_date']['month']
       . '-' . $form_state['values']['reminder_date']['day'];
-    $fields['reminder_template'] = $form_state['values']['reminder_template'];
+    $fields['settings']['reminder_template'] = $form_state['values']['reminder_template'];
   }
-  registration_update_entity_settings($entity, $fields);
-  drupal_goto('node/' . $nid);
+  $fields['settings'] = serialize($fields['settings']);
+  registration_update_entity_settings($entity, $fields, $type);
+}
+
+/**
+ * Register button form callback.
+ *
+ * Shows a Register button for a registration enabled entity.
+ *
+ * If the user is already registered for this item, we instead show text to the
+ * user that they are already registered.
+ */
+function registration_register_form($form, &$form_state, $type, $bundle, $eid) {
+  global $user;
+  $form = array();
+  if ($user->uid != 0 && registration_check_email_registered($user->mail, $type, $bundle, $eid)) {
+    return array(
+      'already' => array(
+        '#type' => 'markup',
+        '#markup' => '<small>* ' . t('You are already registered for this item.') . ' *</small>',
+      ),
+    );
+  }
+  $form['eid'] = array(
+    '#type' => 'hidden',
+    '#value' => $eid,
+  );
+  $form['etype'] = array(
+    '#type' => 'hidden',
+    '#value' => $type,
+  );
+  $form['bundle'] = array(
+    '#type' => 'hidden',
+    '#value' => $bundle,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Register',
+  );
+  return $form;
+}
+
+/**
+ * Register button form submit.
+ *
+ * Loads up the complete registration form for the entity.
+ */
+function registration_register_form_submit($form, &$form_state) {
+  drupal_goto('register/' . $form_state['values']['etype'] . '/' . $form_state['values']['bundle'] . '/' . $form_state['values']['eid']);
+}
+
+/**
+ * Registration form page title callback.
+ */
+function registration_register_entity_title($type, $bundle, $entityid) {
+  $entity = entity_load($type, array($entityid));
+  return t('Register for @title', array('@title' => $entity[$entityid]->title));
 }
 
 /**
@@ -633,59 +548,4 @@ function registration_register_entity_form_submit($form, &$form_state) {
   field_attach_submit('registration', $registration, $form['registration'], $form_state);
   drupal_set_message(t('Your registration has been received.'));
   drupal_goto($entitytype . '/' . $entityid);
-}
-
-/**
- * Register button form callback.
- *
- * Shows a Register button for a registration enabled entity.
- *
- * If the user is already registered for this item, we instead show text to the
- * user that they are already registered.
- */
-function registration_register_form($form, &$form_state, $type, $bundle, $eid) {
-  global $user;
-  $form = array();
-  if ($user->uid != 0 && registration_check_email_registered($user->mail, $type, $bundle, $eid)) {
-    return array(
-      'already' => array(
-        '#type' => 'markup',
-        '#markup' => '<small>* ' . t('You are already registered for this item.') . ' *</small>',
-      ),
-    );
-  }
-  $form['eid'] = array(
-    '#type' => 'hidden',
-    '#value' => $eid,
-  );
-  $form['etype'] = array(
-    '#type' => 'hidden',
-    '#value' => $type,
-  );
-  $form['bundle'] = array(
-    '#type' => 'hidden',
-    '#value' => $bundle,
-  );
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => 'Register',
-  );
-  return $form;
-}
-
-/**
- * Register button form submit.
- *
- * Loads up the complete registration form for the entity.
- */
-function registration_register_form_submit($form, &$form_state) {
-  drupal_goto('register/' . $form_state['values']['etype'] . '/' . $form_state['values']['bundle'] . '/' . $form_state['values']['eid']);
-}
-
-/**
- * Registration form page title callback.
- */
-function registration_register_entity_title($type, $bundle, $entityid) {
-  $entity = entity_load($type, array($entityid));
-  return t('Register for @title', array('@title' => $entity[$entityid]->title));
 }
