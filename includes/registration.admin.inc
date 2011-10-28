@@ -198,8 +198,6 @@ function registration_entity_type_exists($type) {
  * @todo Delete all fields associated with only this entity.
  */
 function registration_delete_type_form($form, $form_state, $type) {
-  //$args = func_get_arg(1);
-  //$type = $args['build_info']['args'][0];
   $form = array();
   $form['delete_confirm'] = array(
     '#type' => 'markup',
@@ -286,14 +284,16 @@ function registration_delete_type_form_cancel($form, $form_state) {
  */
 function registration_admin_form_title($type, $action, $bundle = NULL) {
   $mtype = registration_type_load($type);
+  $t = "Msg";
   switch ($action) {
     case 'Status':
-      return 'Set Status for ' . $type . ':' . $bundle;
-    case 'Delete':
-      return 'Delete type ' . $mtype->name;
-    case 'Edit':
-      return 'Edit type ' . $mtype->name;
+      $t = t('Set Status for @bundle', array('@bundle' => $type . ':' . $bundle));
+      break;
+    default:
+      $t = t('@action type @type', array('@action' => $action, '@type' => $mtype->name));
+      break;
   }
+  return $t;
 }
 
 /**

@@ -177,11 +177,11 @@ function registration_form($form, &$form_state, $registration) {
     '#required' => TRUE,
   );
 
-  $settings  = registration_node_settings($registration->nid);
+  $settings  = registration_entity_settings($entity);
   $capacity  = $settings['capacity'];
   $remaining = 20;
   if ($capacity) {
-    $remaining = $capacity - registration_event_count($registration->nid);
+    $remaining = $capacity - registration_event_count($entity);
   }
   $options = array();
   for ($i = 1; $i < $remaining + 1; $i++) {
@@ -240,7 +240,7 @@ function registration_form_validate($form, &$form_state) {
   $registration = $form_state['registration'];
 
   // verify the event hasn't sold out
-  if (!registration_has_room($registration->nid)) {
+  if (!registration_has_room($entity)) {
     drupal_set_message(t('Sorry, this event has sold out during your registration.'));
   }
 
@@ -390,7 +390,7 @@ function registration_registrations_broadcast_form_submit($form, &$form_state) {
 function registration_registrations_settings_form($form, &$form_state, $node) {
   $form_state['nid'] = $node->nid;
 
-  $settings = registration_node_settings($node->nid);
+  $settings = registration_entity_settings($node->nid);
 
   $form['status'] = array(
     '#type' => 'checkbox',
@@ -534,7 +534,7 @@ function registration_registrations_settings_form_submit($form, &$form_state) {
       . '-' . $form_state['values']['reminder_date']['day'];
     $fields['reminder_template'] = $form_state['values']['reminder_template'];
   }
-  registration_update_node_settings($nid, $fields);
+  registration_update_entity_settings($entity, $fields);
   drupal_goto('node/' . $nid);
 }
 

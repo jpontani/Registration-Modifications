@@ -65,6 +65,7 @@ function registration_menu() {
     'file' => 'includes/registration.admin.inc',
   );
   $items['admin/structure/registration/types/manage/%'] = array(
+    'title' => 'Edit Registration Type',
     'title callback' => 'registration_admin_form_title',
     'title arguments' => array(5, 'Edit'),
     'file' => 'includes/registration.admin.inc',
@@ -262,7 +263,6 @@ function registration_form_node_type_form_alter(&$form, &$form_state) {
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
   );
-
   $form['registration']['registration_status:node:'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable registrations for this content type'),
@@ -292,38 +292,36 @@ function registration_node_type_delete($info) {
  * Access callback for registration_register_page().
  */
 function registration_register_page_access($node) {
-  $ret = FALSE;
   if (variable_get('registration_status:node:_' . $node->type, 0)) {
     if (user_access('administer registration') || user_access('add registration')) {
-      $settings = registration_node_settings($node->nid);
+      $settings = registration_entity_settings($node->nid);
       if ($settings['status']) {
-        $ret = TRUE;
+        return TRUE;
       }
     }
   }
-
-  return $ret;
+  return FALSE;
 }
 
 /**
  * Access callback for registration_registrations_page().
  */
 function registration_administer_registrations_access($node) {
-  $ret = FALSE;
   if (variable_get('registration_status:node:_' . $node->type, 0)) {
     if (user_access('administer registration')) {
-      $ret = TRUE;
+      return TRUE;
     }
   }
-
-  return $ret;
+  return FALSE;
 }
 
 /**
  * Page callback for adding a registration.
+ *
+ * @TODO Get registration bundle type to create for this entity.
  */
-function registration_register_page($node) {
-  if (registration_has_room($node->nid)) {
+function registration_register_page($entity) {
+  if (registration_has_room($entity)) {
     $registration = entity_create('registration', array('type' => 'registration'));
     $registration->nid = $node->nid;
     return drupal_get_form('registration_form', $registration);
@@ -335,8 +333,10 @@ function registration_register_page($node) {
 
 /**
  * Page callback for viewing registrations
+ *
+ * @TODO Switch to entities and field values for items.
  */
-function registration_registrations_page($node) {
+function registration_registrations_page($entity) {
   $header = array(
     array(
       'data' => t('id'),
@@ -374,12 +374,13 @@ function registration_registrations_page($node) {
     ),
   );
 
+  $data = entity_extract_ids($entity->type, $entity);
   $query = new EntityFieldQuery;
   $result = $query
     ->entityCondition('entity_type', 'registration')
-    ->propertyCondition('eid', $node->nid)
-    ->propertyCondition('entity_type', 'node')
-    ->propertyCondition('entity_bundle', $node->type)
+    ->propertyCondition('eid', $data[0])
+    ->propertyCondition('entity_type', $entity->type)
+    ->propertyCondition('entity_bundle', $data[2])
     ->pager(20)
     ->tableSort($header)
     ->execute();
@@ -411,15 +412,15 @@ function registration_registrations_page($node) {
       );
     }
 
-    $settings = registration_node_settings($node->nid);
+    $settings = registration_entity_settings($entity);
 
     $table = array(
       'header' => $header,
       'rows' => $rows,
       'caption' => t('List of registrations for %title. !count of !capacity slots are filled.',
         array(
-          '%title' => $node->title,
-          '!count' => '<strong>' . registration_event_count($node->nid) . '</strong>',
+          '%title' => $entity->title,
+          '!count' => '<strong>' . registration_event_count($entity) . '</strong>',
           '!capacity' => '<strong>' . $settings['capacity'] . '</strong>',
         )
       ),
@@ -429,42 +430,44 @@ function registration_registrations_page($node) {
   }
   else {
     $out = t('There are no registratrants for %name',
-      array('%name' => $node->title));
+      array('%name' => $entity->title));
   }
 
   return $out;
 }
 
 /**
- * Helper to determine if a node has any slots left.
+ * Helper to determine if an entity has any slots left.
  */
-function registration_has_room($nid) {
-  $ret      = TRUE;
-  $settings = registration_node_settings($nid);
+function registration_has_room($entity) {
+  $settings = registration_entity_settings($entity);
   $capacity = $settings['capacity'];
   if ($capacity) {
-    $count = registration_event_count($nid);
+    $count = registration_event_count($entity);
     if (($capacity - $count) < 1) {
-      $ret = FALSE;
+      return FALSE;
     }
   }
-
-  return $ret;
+  return TRUE;
 }
 
 /**
- * Return the number of registrations for a given node.
+ * Return the number of registrations for a given entity.
  *
- * @param int $nid
+ * @param $entity
  *
  * @return int
  */
-function registration_event_count($nid) {
+function registration_event_count($entity) {
   $count = &drupal_static(__FUNCTION__, FALSE);
   if (!$count) {
-    $count = db_query("SELECT sum(count) FROM {registration} WHERE eid = :nid",
-      array(':nid' => $nid)
-    )->fetchField();
+    $data = entity_extract_ids($entity->type, $entity);
+    $count = db_select('registration', 'r')
+      ->fields('r')
+      ->condition('entity_type', $entity->type)
+      ->condition('entity_bundle', $data[2])
+      ->condition('eid', $data[0])
+      ->execute()->rowCount();
   }
   return $count;
 }
@@ -473,8 +476,22 @@ function registration_event_count($nid) {
  * Implements hook_entity_delete().
  */
 function registration_entity_delete($entity, $type) {
+  // Notify field API that this entity was deleted.
+  field_attach_delete($type, $entity);
+  // Get some more info on this entity.
   $data = entity_extract_ids($type, $entity);
-  db_delete('registration')->condition('eid', $data[0]);
+  // Delete all registrations attached to this entity.
+  db_delete('registration')
+    ->condition('eid', $data[0])
+    ->condition('entity_type', $type)
+    ->condition('entity_bundle', $data[2])
+    ->execute();
+  // Delete all registration settings for this entity.
+  db_delete('registration_attach')
+    ->condition('entity_id', $data[0])
+    ->condition('entity_type', $type)
+    ->condition('entity_bundle', $data[2])
+    ->execute();
 }
 
 /**
@@ -483,22 +500,33 @@ function registration_entity_delete($entity, $type) {
  * Deletes registrations and settings for this node.
  */
 function registration_node_delete($node) {
-  db_delete('registration')->condition('entity_type', 'node')->condition('type', $node->type)->condition('eid', $node->nid)->execute();
-  db_delete('registration_node')->condition('nid', $node->nid)->execute();
+  db_delete('registration')
+    ->condition('entity_type', 'node')
+    ->condition('entity_bundle', $node->type)
+    ->condition('eid', $node->nid)
+    ->execute();
+  db_delete('registration_node')
+    ->condition('entity_id', $node->nid)
+    ->condition('entity_type', 'node')
+    ->condition('entity_bundle', $node->type)
+    ->execute();
 }
 
 /**
- * Return all registration settings for a given node.
+ * Return all registration settings for a given entity.
  *
- * @param string $nid
+ * @param $entity
  *
  * @return array
  */
-function registration_node_settings($nid) {
+function registration_entity_settings($entity) {
   // @TODO: Add static variable handling.
-  $result = db_select('registration_node', 'rn')
-    ->fields('rn')
-    ->condition('nid', $nid, '=')
+  $data = entity_extract_ids($entity->type, $entity);
+  $result = db_select('registration_attach', 'ra')
+    ->fields('ra')
+    ->condition('entity_id', $data[0])
+    ->condition('entity_type', $entity->type)
+    ->condition('entity_bundle', $data[2])
     ->execute()
     ->fetchAssoc();
 
@@ -520,23 +548,25 @@ function registration_mail($key, &$message, $params) {
 }
 
 /**
- * Send an email to all registrations for a given node.
+ * Send an email to all registrations for a given entity.
  *
  * @param object $node
  */
-function registration_send_broadcast($node, $subject, $message) {
+function registration_send_broadcast($entity, $subject, $message) {
   global $language;
 
   // grab registration node settings
-  $settings = registration_node_settings($node->nid);
+  $data = entity_extract_ids($entity->type, $entity);
+  $settings = registration_entity_settings($entity);
   $from = $settings['settings']['from_address'];
 
   // grab all registrations
   $query = new EntityFieldQuery();
   $entities = $query
     ->entityCondition('entity_type', 'registration')
-    ->entityCondition('bundle', 'registration')
-    ->propertyCondition('nid', $node->nid)
+    ->propertyCondition('entity_type', $entity->type)
+    ->propertyCondition('entity_bundle', $data[2])
+    ->propertyCondition('eid', $data[0])
     ->execute();
 
   if (!empty($entities)) {
@@ -555,6 +585,7 @@ function registration_send_broadcast($node, $subject, $message) {
     // send the email to each registrant and communicate results
     $success_count = 0;
     foreach ($registrations as $registration) {
+      // @TODO Get email address from field value
       $recipients[] = $registration->mail;
       $result = drupal_mail('registration', 'broadcast',
         $registration->mail, $language, $params, $from
@@ -581,25 +612,32 @@ function registration_send_broadcast($node, $subject, $message) {
   else {
     drupal_set_message(
       t('There are no participants registered for this %type.',
-          array('%type' => $node->type)),
+          array('%type' => $entity->type)),
       $type = 'warning'
     );
   }
 }
 
 /**
- * Update a node's registration settings.
+ * Update an entity's registration settings.
  *
- * @param int $nid
+ * @param $entity
  * @param array $settings
  *   Associative array containing additional node registration settings.
  *   Keys are status, capacity, send_reminder, reminder_date, reminder_template
  *   and an associatve array of additional settings.
  */
-function registration_update_node_settings($nid, $settings) {
+function registration_update_entity_settings($entity, $settings) {
   // insert or udpate registration node settings
-  db_merge('registration_node')
-    ->key(array('nid' => $nid))
+  $data = entity_extract_ids($entity->type, $entity);
+  db_merge('registration_attach')
+    ->key(
+      array(
+        'eid' => $data[0],
+        'entity_type' => $entity->type,
+        'entity_bundle' => $data[2]
+      )
+    )
     ->fields($settings)
     ->execute();
 
