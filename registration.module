@@ -284,6 +284,99 @@ function registration_form_node_type_form_alter(&$form, &$form_state) {
 }
 
 /**
+ * Implements hook_node_submit().
+ */
+function registration_node_submit($node, $form, &$form_state) {
+  if ($form_state['values']['registration_status:node:']) {
+    $settings = array(
+      'reg_bundle' => $form_state['values']['registration_bundle:node:'],
+      'settings' => serialize(registration_default_settings()),
+    );
+    $info = array(
+      'id' => $node->nid,
+      'type' => 'node',
+      'bundle' => $node->type,
+    );
+    registration_update_entity_settings($info, $settings);
+  }
+}
+
+function registration_form_alter(&$form, &$form_state, $form_id) {
+  if (!function_exists('registration_bundle_options')) {
+    module_load_include('inc', 'registration', 'includes/registration.admin');
+  }
+  $node_types = node_type_get_types();
+  foreach ($node_types as $type => $info) {
+    if ($form_id == $type . '_node_form') {
+      $data = entity_extract_ids('node', $form_state['node']);
+      $form['registration'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Registration Settings'),
+        '#collapsible' => TRUE,
+        '#collapsed' => FALSE,
+        '#group' => 'additional_settings',
+      );
+      $form['registration']['registration_status:node:'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Enable registrations for this node'),
+        '#default_value' => registration_entity_registration_status('node', $data[2], $data[0]),
+        '#description' => t('If enabled, users will be allowed to register for this
+          node.'),
+      );
+      $form['registration']['registration_bundle:node:'] = array(
+        '#type' => 'select',
+        '#title' => t('Registration Type'),
+        '#default_value' => registration_entity_registration_bundle('node', $data[2], $data[0]),
+        '#options' => registration_bundle_options(),
+      );
+    }
+  }
+}
+
+/**
+ * Returns the registration bundle for this particular entity.
+ */
+function registration_entity_registration_bundle($type, $bundle, $id = 0) {
+  $q = db_select('registration_attach', 'ra')
+    ->fields('ra', array('reg_bundle'))
+    ->condition('entity_type', $type)
+    ->condition('entity_bundle', $bundle)
+    ->condition('entity_id', $id)
+    ->execute()
+    ->fetchCol();
+  if (count($q) == 0) {
+    if ($id != 0) {
+      // No settings found on a per-entity basis, check global entity settings
+      return registration_entity_registration_bundle($type, $bundle);
+    }
+    return '';
+  }
+  return $q[0];
+}
+
+/**
+ * Returns the registration status for this particular entity.
+ */
+function registration_entity_registration_status($type, $bundle, $id = 0) {
+  $q = db_select('registration_attach', 'ra')
+    ->fields('ra', array('settings'))
+    ->condition('entity_type', $type)
+    ->condition('entity_bundle', $bundle)
+    ->condition('entity_id', $id)
+    ->execute()
+    ->fetchCol();
+  if (count($q) == 0) {
+    if ($id != 0) {
+      // No settings found on a per-entity basis, check global entity settings
+      return registration_entity_registration_status($type, $bundle);
+    }
+    return 0;
+  }
+  $settings = unserialize($q[0]);
+  return $settings['status'];
+}
+
+/**
  * Implements hook_node_type_delete().
  * @todo Delete registrations that belong to this node type.
  */
@@ -508,7 +601,7 @@ function registration_node_delete($node) {
     ->condition('entity_bundle', $node->type)
     ->condition('eid', $node->nid)
     ->execute();
-  db_delete('registration_node')
+  db_delete('registration_attach')
     ->condition('entity_id', $node->nid)
     ->condition('entity_type', 'node')
     ->condition('entity_bundle', $node->type)
@@ -627,16 +720,17 @@ function registration_send_broadcast($entity, $subject, $message) {
  *   Associative array containing additional node registration settings.
  *   Keys are status, capacity, send_reminder, reminder_date, reminder_template
  *   and an associatve array of additional settings.
+ * @param $type
+ *   The entity type (user, node, etc.).
  */
-function registration_update_entity_settings($entity, $settings, $type) {
+function registration_update_entity_settings($entity_info, $settings) {
   // insert or udpate registration node settings
-  $data = entity_extract_ids($type, $entity);
   db_merge('registration_attach')
     ->key(
       array(
-        'entity_id' => $data[0],
-        'entity_type' => $type,
-        'entity_bundle' => $data[2]
+        'entity_id' => $entity_info['id'],
+        'entity_type' => $entity_info['type'],
+        'entity_bundle' => $entity_info['bundle']
       )
     )
     ->fields($settings)

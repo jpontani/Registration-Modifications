@@ -19,7 +19,7 @@ function registration_form($form, &$form_state, $registration, $entity, $type) {
   $data = entity_extract_ids($type, $entity);
 
   global $user;
-  $form['mail'] = array(
+  $form['email'] = array(
     '#type' => 'textfield',
     '#title' => t('Email'),
     '#description' => t('The email to associate with this registration.'),
@@ -99,15 +99,15 @@ function registration_form_validate($form, &$form_state) {
   }
 
   // validate email address
-  if (!valid_email_address($form_state['values']['mail'])) {
-    form_set_error('mail', t('The email address is invalid.'));
+  if (!valid_email_address($form_state['values']['email'])) {
+    form_set_error('email', t('The email address is invalid.'));
   }
   // @TODO check for duplicate registrations
   else {
     $count = 0;
     if ($count > 0) {
-      form_set_error('mail', t('%mail is already registered for this event.',
-        array('%mail' => $form_state['values']['mail'])));
+      form_set_error('email', t('%mail is already registered for this event.',
+        array('%mail' => $form_state['values']['email'])));
     }
   }
 
@@ -127,7 +127,7 @@ function registration_form_submit($form, &$form_state) {
   // Set the contact's author uid
   global $user;
   $registration->author_uid = $user->uid;
-  $registration->mail = $form_state['values']['mail'];
+  $email = $form_state['values']['email'];
   $registration->count = $form_state['values']['count'];
 
   // Notify field widgets.
@@ -378,6 +378,11 @@ function registration_registrations_settings_form_submit($form, &$form_state) {
   $entity = $form_state['entity'];
   $type = $form_state['entity_type'];
   $data = entity_extract_ids($type, $entity);
+  $info = array(
+    'id' => $data[0],
+    'type' => $type,
+    'bundle' => $data[2],
+  );
   $fields = array(
     'entity_id' => $data[0],
     'entity_type' => $type,
@@ -395,7 +400,7 @@ function registration_registrations_settings_form_submit($form, &$form_state) {
     $fields['settings']['reminder_template'] = $form_state['values']['reminder_template'];
   }
   $fields['settings'] = serialize($fields['settings']);
-  registration_update_entity_settings($entity, $fields, $type);
+  registration_update_entity_settings($info, $fields);
 }
 
 /**
@@ -501,6 +506,12 @@ function registration_register_entity_form($form, &$form_state, $type, $bundle, 
     $form['registration']['entity'] = array(
       '#type' => 'value',
       '#value' => $entity,
+    );
+    $form['registration']['email'] = array(
+      '#type' => 'textfield',
+      '#text_format' => 'email_default',
+      '#title' => 'Email Address',
+      '#required' => TRUE,
     );
     $form['actions'] = array(
       '#type' => 'actions',

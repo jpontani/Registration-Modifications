@@ -63,8 +63,8 @@ function registration_admin_page() {
       );
       foreach ($data['bundles'] as $bundle => $bundle_data) {
         $link = $bundle_data['label'];
-        $status = variable_get('registration_status:' . $type . ':_' . $bundle, 0);
-        $usingtype = variable_get('registration_bundle:' . $type . ':_' . $bundle, '');
+        $status = registration_entity_registration_status($type, $bundle);
+        $usingtype = registration_entity_registration_bundle($type, $bundle);
         $status = ($status ? 'Enabled' : 'Disabled');
         $status = l($status, 'admin/structure/registration/status/' . $type . '/' . $bundle) . ($status == 'Enabled' ? ' <small>(' . $usingtype . ')</small>' : '');
         if (!empty($bundle_data['admin'])) {
@@ -304,20 +304,25 @@ function registration_status_form($form, $form_state, $type, $bundle) {
 
   $form['type'] = array(
     '#type' => 'hidden',
-    '#value' => $type . ':_' . $bundle,
+    '#value' => $type,
+  );
+
+  $form['bundle'] = array(
+    '#type' => 'hidden',
+    '#value' => $bundle,
   );
 
   $form['status'] = array(
     '#type' => 'radios',
     '#title' => t('Status'),
-    '#default_value' => variable_get('registration_status:' . $type . ':_' . $bundle, 0),
+    '#default_value' => registration_entity_registration_status($type, $bundle),
     '#options' => array('Disabled', 'Enabled'),
   );
 
   $form['registration_entity'] = array(
     '#type' => 'select',
     '#title' => t('Registration Type'),
-    '#default_value' => variable_get('registration_bundle:' . $type . ':_' . $bundle, ''),
+    '#default_value' => registration_entity_registration_bundle($type, $bundle),
     '#options' => registration_bundle_options(),
   );
 
@@ -333,9 +338,18 @@ function registration_status_form($form, $form_state, $type, $bundle) {
  * Entity registration status submit handler.
  */
 function registration_status_form_submit($form, &$form_state) {
+  $bundle = $form_state['values']['bundle'];
   $type = $form_state['values']['type'];
-  variable_set('registration_bundle:' . $type, $form_state['values']['registration_entity']);
-  variable_set('registration_status:' . $type, $form_state['values']['status']);
+  $entity = array(
+    'id' => 0,
+    'type' => $type,
+    'bundle' => $bundle,
+  );
+  $settings = array(
+    'reg_bundle' => $form_state['values']['registration_entity'],
+    'settings' => serialize(registration_default_settings()),
+  );
+  registration_update_entity_settings($entity, $settings);
   drupal_set_message(t('Registration settings updated for @type.', array('@type' => $type)));
   drupal_goto('admin/structure/registration');
 }

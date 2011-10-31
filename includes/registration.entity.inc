@@ -95,12 +95,6 @@ function registration_entity_property_info_alter(&$info) {
     'type' => 'date',
     'schema field' => 'updated',
   );
-  $properties['nid'] = array(
-    'label' => t("Node"),
-    'description' => t("The node this registration is associated with."),
-    'type' => 'node',
-    'schema field' => 'nid',
-  );
 
   return $info;
 }
@@ -210,23 +204,26 @@ function registration_save($registration) {
  * Implements hook_field_extra_fields().
  */
 function registration_field_extra_fields() {
-  // expose the email property on the fields and display settings forms.
-  $extra['registration']['registration'] = array(
-    'form' => array(
-      'mail' => array(
-        'label' => t('Email'),
-        'description' => t('Registrant\'s email address.'),
-        'weight' => 0,
+  $extra = array();
+
+  foreach (registration_entity_types() as $type => $reg_type) {
+    $extra['registration'][$type] = array(
+      'form' => array(
+        'email' => array(
+          'label' => t('Email'),
+          'description' => t('Registration module email form element'),
+          'weight' => -5,
+        ),
       ),
-    ),
-    'display' => array(
-      'mail' => array(
-        'label' => t('Email'),
-        'description' => t('Registrant\'s email address.'),
-        'weight' => 0,
+      'display' => array(
+        'email' => array(
+          'label' => t('Email'),
+          'description' => t("Registered User's Email Address"),
+          'weight' => -5,
+        ),
       ),
-    )
-  );
+    );
+  }
 
   return $extra;
 }
