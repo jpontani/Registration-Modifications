@@ -224,6 +224,7 @@ function registration_schema() {
         'type' => 'text',
         'size' => 'large',
         'not null' => TRUE,
+        'serialize' => TRUE,
       ),
     ),
     'primary key' => array('entity_id', 'entity_type', 'entity_bundle'),
