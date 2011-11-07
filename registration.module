@@ -381,8 +381,7 @@ function registration_entity_registration_status($type, $bundle, $id = 0) {
  * @todo Delete registrations that belong to this node type.
  */
 function registration_node_type_delete($info) {
-  variable_del('registration_status:node:_' . $info->type);
-  variable_del('registration_bundle:node:_' . $info->type);
+  
 }
 
 /**
@@ -404,7 +403,7 @@ function registration_register_page_access($node) {
  * Access callback for registration_registrations_page().
  */
 function registration_administer_registrations_access($node) {
-  if (variable_get('registration_status:node:_' . $node->type, 0)) {
+  if (registration_entity_registration_status('node', $node->type, $node->nid)) {
     if (user_access('administer registration')) {
       return TRUE;
     }
@@ -557,6 +556,9 @@ function registration_has_room($entity) {
 function registration_event_count($entity) {
   $count = &drupal_static(__FUNCTION__, FALSE);
   if (!$count) {
+    if (!isset($entity['id'])) {
+      $entity['id'] = 0;
+    }
     $count = db_select('registration', 'r')
       ->fields('r')
       ->condition('entity_type', $entity['type'])
@@ -616,6 +618,9 @@ function registration_node_delete($node) {
  */
 function registration_entity_settings($entity) {
   // @TODO: Add static variable handling.
+  if (!isset($entity['id'])) {
+    $entity['id'] = 0;
+  }
   $result = db_select('registration_attach', 'ra')
     ->fields('ra')
     ->condition('entity_id', $entity['id'])
