@@ -389,7 +389,7 @@ function registration_node_type_delete($info) {
  * Access callback for registration_register_page().
  */
 function registration_register_page_access($node) {
-  if (variable_get('registration_status:node:_' . $node->type, 0)) {
+  if (registration_entity_registration_status('node', $node->type, $node->nid)) {
     if (user_access('administer registration') || user_access('add registration')) {
       $settings = registration_entity_settings($node, 'node');
       if ($settings['status']) {
