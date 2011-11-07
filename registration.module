@@ -536,7 +536,7 @@ function registration_registrations_page($entity) {
  * Helper to determine if an entity has any slots left.
  */
 function registration_has_room($entity) {
-  $settings = registration_entity_settings($entity, $entity->type);
+  $settings = registration_entity_settings($entity);
   $capacity = $settings['capacity'];
   if ($capacity) {
     $count = registration_event_count($entity);
@@ -557,12 +557,11 @@ function registration_has_room($entity) {
 function registration_event_count($entity) {
   $count = &drupal_static(__FUNCTION__, FALSE);
   if (!$count) {
-    $data = entity_extract_ids($entity->type, $entity);
     $count = db_select('registration', 'r')
       ->fields('r')
-      ->condition('entity_type', $entity->type)
-      ->condition('entity_bundle', $data[2])
-      ->condition('eid', $data[0])
+      ->condition('entity_type', $entity['type'])
+      ->condition('entity_bundle', $entity['bundle'])
+      ->condition('eid', $entity['id'])
       ->execute()->rowCount();
   }
   return $count;
