@@ -336,18 +336,22 @@ function registration_form_alter(&$form, &$form_state, $form_id) {
 /**
  * Returns the registration bundle for this particular entity.
  */
-function registration_entity_registration_bundle($type, $bundle, $id = 0) {
+function registration_entity_registration_bundle($entity) {
+  if (!isset($entity['id'])) {
+    $entity['id'] = 0;
+  }
   $q = db_select('registration_attach', 'ra')
     ->fields('ra', array('reg_bundle'))
-    ->condition('entity_type', $type)
-    ->condition('entity_bundle', $bundle)
-    ->condition('entity_id', $id)
+    ->condition('entity_type', $entity['type'])
+    ->condition('entity_bundle', $entity['bundle'])
+    ->condition('entity_id', $entity['id'])
     ->execute()
     ->fetchCol();
   if (count($q) == 0) {
-    if ($id != 0) {
+    if ($entity['id'] != 0) {
       // No settings found on a per-entity basis, check global entity settings
-      return registration_entity_registration_bundle($type, $bundle);
+      unset($entity['id']);
+      return registration_entity_registration_bundle($entity);
     }
     return '';
   }
@@ -357,17 +361,21 @@ function registration_entity_registration_bundle($type, $bundle, $id = 0) {
 /**
  * Returns the registration status for this particular entity.
  */
-function registration_entity_registration_status($type, $bundle, $id = 0) {
+function registration_entity_registration_status($entity) {
+  if (!isset($entity['id'])) {
+    $entity['id'] = 0;
+  }
   $q = db_select('registration_attach', 'ra')
     ->fields('ra', array('settings'))
-    ->condition('entity_type', $type)
-    ->condition('entity_bundle', $bundle)
-    ->condition('entity_id', $id)
+    ->condition('entity_type', $entity['type'])
+    ->condition('entity_bundle', $entity['bundle'])
+    ->condition('entity_id', $entity['id'])
     ->execute()
     ->fetchCol();
   if (count($q) == 0) {
-    if ($id != 0) {
+    if ($entity['id'] != 0) {
       // No settings found on a per-entity basis, check global entity settings
+      unset($entity['id']);
       return registration_entity_registration_status($type, $bundle);
     }
     return 0;
@@ -388,12 +396,14 @@ function registration_node_type_delete($info) {
  * Access callback for registration_register_page().
  */
 function registration_register_page_access($node) {
-  if (registration_entity_registration_status('node', $node->type, $node->nid)) {
+  $entity = array(
+    'id' => $node->nid,
+    'type' => 'node',
+    'bundle' => $node->type;
+  );
+  if (registration_entity_registration_status($entity)) {
     if (user_access('administer registration') || user_access('add registration')) {
-      $settings = registration_entity_settings($node, 'node');
-      if ($settings['status']) {
-        return TRUE;
-      }
+      return TRUE;
     }
   }
   return FALSE;
@@ -403,7 +413,12 @@ function registration_register_page_access($node) {
  * Access callback for registration_registrations_page().
  */
 function registration_administer_registrations_access($node) {
-  if (registration_entity_registration_status('node', $node->type, $node->nid)) {
+  $entity = array(
+    'id' => $node->nid,
+    'type' => 'node',
+    'bundle' => $node->type;
+  );
+  if (registration_entity_registration_status($entity)) {
     if (user_access('administer registration')) {
       return TRUE;
     }
@@ -417,8 +432,15 @@ function registration_administer_registrations_access($node) {
  * @TODO Get registration bundle type to create for this entity.
  */
 function registration_register_page($entity, $type) {
-  if (registration_has_room($entity)) {
-    $registration = entity_create('registration', array('type' => 'registration'));
+  $data = entity_extract_ids($type, $entity);
+  $ent = array(
+    'id' => $data[0],
+    'type' => $type,
+    'bundle' => $data[2],
+  );
+  if (registration_has_room($ent)) {
+    $bundle = registration_entity_registration_bundle($ent);
+    $registration = entity_create('registration', array('type' => $bundle));
     return drupal_get_form('registration_form', $registration, $entity, $type);
   }
   else {
@@ -470,6 +492,11 @@ function registration_registrations_page($entity) {
   );
 
   $data = entity_extract_ids($entity->type, $entity);
+  $ent = array(
+    'id' => $data[0],
+    'type' => $entity->type,
+    'bundle' => $data[2],
+  );
   $query = new EntityFieldQuery;
   $result = $query
     ->entityCondition('entity_type', 'registration')
@@ -507,7 +534,7 @@ function registration_registrations_page($entity) {
       );
     }
 
-    $settings = registration_entity_settings($entity);
+    $settings = registration_entity_settings($ent);
 
     $table = array(
       'header' => $header,
@@ -515,7 +542,7 @@ function registration_registrations_page($entity) {
       'caption' => t('List of registrations for %title. !count of !capacity slots are filled.',
         array(
           '%title' => $entity->title,
-          '!count' => '<strong>' . registration_event_count($entity) . '</strong>',
+          '!count' => '<strong>' . registration_event_count($ent) . '</strong>',
           '!capacity' => '<strong>' . $settings['capacity'] . '</strong>',
         )
       ),
@@ -660,7 +687,12 @@ function registration_send_broadcast($entity, $subject, $message) {
 
   // grab registration node settings
   $data = entity_extract_ids($entity->type, $entity);
-  $settings = registration_entity_settings($entity);
+  $ent = array(
+    'id' => $data[0],
+    'type' => $entity->type,
+    'bundle' => $data[2],
+  );
+  $settings = registration_entity_settings($ent);
   $from = $settings['settings']['from_address'];
 
   // grab all registrations
@@ -725,12 +757,12 @@ function registration_send_broadcast($entity, $subject, $message) {
  * Update an entity's registration settings.
  *
  * @param $entity
+ *   Associative array of entity info.
+ *   Keys are id, type and bundle.
  * @param array $settings
  *   Associative array containing additional node registration settings.
  *   Keys are status, capacity, send_reminder, reminder_date, reminder_template
  *   and an associatve array of additional settings.
- * @param $type
- *   The entity type (user, node, etc.).
  */
 function registration_update_entity_settings($entity_info, $settings) {
   // insert or udpate registration node settings
@@ -755,28 +787,24 @@ function registration_cron_nope() {
   //@TODO: need to have a sensible batch limit, passed in as a limit param
 
   // grab all registrations that have reminders set for this day
-  $results = db_select('registration_node', 'rn')
-    ->fields('rn')
-    ->condition('send_reminder', 1)
-    ->condition('reminder_date', date('Y-m-d 00:00:00'))
-    ->range(0, 10)
+  $results = db_select('registration', 'r')
+    ->fields('r')
     ->execute()
-    ->fetchAllAssoc('nid');
+    ->fetchAssoc();
 
   foreach ($results as $result) {
-    $node = node_load($result->nid);
-    $message = $result->reminder_template;
+    $ent = array(
+      'id' => $result->eid,
+      'type' => $result->entity_type,
+      'bundle' => $result->entity_bundle,
+    );
+    $entity = entity_get_controller($ent['type'])->load($ent['id']);
+    $entity = $entity[$result->eid];
     if (module_exists('token')) {
-      $message = token_replace($message, array('node' => $node));
+      $message = token_replace($message, array('entity' => $entity));
     }
-    $subject = 'Reminder for ' . $node->title;
-    registration_send_broadcast($node, $subject, $message);
-
-    // set reminder flag to off
-    db_update('registration_node')
-      ->fields(array('send_reminder' => 0))
-      ->condition('nid', $node->nid)
-      ->execute();
+    $subject = 'Reminder for ' . $entity->title;
+    registration_send_broadcast($entity, $subject, $message);
   }
 }
 
