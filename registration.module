@@ -334,7 +334,40 @@ function registration_form_alter(&$form, &$form_state, $form_id) {
 }
 
 /**
+ * Returns the number of slots available for the given entity.
+ *
+ * @param $entity
+ *   Associate array of entity identifying data.
+ *   Allowed keys are:
+ *     id, type, bundle
+ */
+function registration_entity_slots_available($entity) {
+  $capacity = registration_entity_settings($entity);
+  $capacity = $capacity['capacity'];
+  $result = db_select('registration', 'r')
+    ->fields('r')
+    ->condition('entity_type', $entity['type'])
+    ->condition('entity_bundle', $entity['bundle'])
+    ->condition('eid', $entity['id'])
+    ->condition('status', 1)
+    ->execute()
+    ->rowCount();
+  $available = 0;
+  if ($result > $capacity) {
+    return 0;
+  }
+  else {
+    return $capacity - $result;
+  }
+}
+
+/**
  * Returns the registration bundle for this particular entity.
+ *
+ * @param $entity
+ *   Associate array of entity identifying data.
+ *   Allowed keys are:
+ *     id, type, bundle
  */
 function registration_entity_registration_bundle($entity) {
   if (!isset($entity['id'])) {
@@ -360,6 +393,11 @@ function registration_entity_registration_bundle($entity) {
 
 /**
  * Returns the registration status for this particular entity.
+ *
+ * @param $entity
+ *   Associate array of entity identifying data.
+ *   Allowed keys are:
+ *     id, type, bundle
  */
 function registration_entity_registration_status($entity) {
   if (!isset($entity['id'])) {
@@ -659,6 +697,9 @@ function registration_entity_settings($entity) {
     ->execute()
     ->fetchAssoc();
   if ($result) {
+    if (!is_array($result['settings'])) {
+      $result['settings'] = unserialize($result['settings']);
+    }
     return $result['settings'];
   }
   if ($entity['id'] != 0) {
