@@ -376,11 +376,14 @@ function registration_entity_registration_status($entity) {
     if ($entity['id'] != 0) {
       // No settings found on a per-entity basis, check global entity settings
       unset($entity['id']);
-      return registration_entity_registration_status($type, $bundle);
+      return registration_entity_registration_status($entity);
     }
     return 0;
   }
   $settings = $q[0];
+  if (!is_array($settings)) {
+    $settings = unserialize($settings);
+  }
   return $settings['status'];
 }
 
@@ -399,7 +402,7 @@ function registration_register_page_access($node) {
   $entity = array(
     'id' => $node->nid,
     'type' => 'node',
-    'bundle' => $node->type;
+    'bundle' => $node->type,
   );
   if (registration_entity_registration_status($entity)) {
     if (user_access('administer registration') || user_access('add registration')) {
@@ -416,7 +419,7 @@ function registration_administer_registrations_access($node) {
   $entity = array(
     'id' => $node->nid,
     'type' => 'node',
-    'bundle' => $node->type;
+    'bundle' => $node->type,
   );
   if (registration_entity_registration_status($entity)) {
     if (user_access('administer registration')) {
