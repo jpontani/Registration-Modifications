@@ -67,14 +67,6 @@ function registration_admin_page() {
         $usingtype = registration_entity_registration_bundle($type, $bundle);
         $status = ($status ? 'Enabled' : 'Disabled');
         $status = l($status, 'admin/structure/registration/status/' . $type . '/' . $bundle) . ($status == 'Enabled' ? ' <small>(' . $usingtype . ')</small>' : '');
-        if (!empty($bundle_data['admin'])) {
-          if (!empty($bundle_data['admin']['real path'])) {
-            $link = l($bundle_data['label'], $bundle_data['admin']['real path']);
-          }
-          else {
-            $link = l($bundle_data['label'], $bundle_data['admin']['path']);
-          }
-        }
         $rows[] = array($link, $status);
       }
     }
