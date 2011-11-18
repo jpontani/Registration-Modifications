@@ -243,8 +243,16 @@ function registration_registrations_broadcast_form_submit($form, &$form_state) {
 function registration_registrations_settings_form($form, &$form_state, $entity, $type) {
   $form_state['entity'] = $entity;
   $form_state['entity_type'] = $type;
+  
+  $data = entity_extract_ids($type, $entity);
+  
+  $entity_info = array(
+    'id' => $data[0],
+    'type' => $type,
+    'bundle' => $data[2],
+  );
 
-  $settings = registration_entity_settings($entity, $type);
+  $settings = registration_entity_settings($entity_info, $type);
   
   $form['status'] = array(
     '#type' => 'checkbox',

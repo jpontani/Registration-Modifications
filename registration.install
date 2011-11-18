@@ -97,7 +97,7 @@ function registration_schema() {
       ),
     ),
     'unique keys' => array(
-      'nid_mail' => array('nid', 'mail'),
+      'eid_mail' => array('eid', 'mail'),
     ),
     'primary key' => array('registration_id'),
   );
@@ -213,7 +213,7 @@ function registration_schema() {
         'length' => 255,
         'not null' => TRUE,
       ),
-      'reg_bundle' => array(
+      'registration_bundle' => array(
         'description' => 'The registration bundle we are attaching.',
         'type' => 'varchar',
         'length' => 255,
@@ -222,7 +222,7 @@ function registration_schema() {
       'settings' => array(
         'description' => 'Serialized object of our registration settings.',
         'type' => 'text',
-        'size' => 'large',
+        'size' => 'big',
         'not null' => TRUE,
         'serialize' => TRUE,
       ),
