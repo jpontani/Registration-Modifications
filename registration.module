@@ -293,7 +293,7 @@ function registration_form_node_type_form_alter(&$form, &$form_state) {
  */
 function registration_entity_submit($entity, $type) {
   $entity_info = entity_get_info($type);
-  if ($entity->registration_status == 1) {
+  if (isset($entity->registration_status) && $entity->registration_status == 1) {
     $settings = array(
       'registration_bundle' => $entity->registration_bundle,
       'settings' => serialize(registration_default_settings()),
