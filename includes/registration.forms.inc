@@ -470,8 +470,13 @@ function registration_register_entity_title($type, $bundle, $entityid) {
  * Form builder for registering for an entity. Adds bundle's fields to the form.
  */
 function registration_register_entity_form($form, &$form_state, $type, $bundle, $entityid) {
-  $entity = variable_get('registration_bundle:' . $type . ':_' . $bundle, FALSE);
-  $status = (int) variable_get('registration_status:' . $type . ':_' . $bundle, 0);
+  $info = array(
+    'id' => $entityid,
+    'type' => $type,
+    'bundle' => $bundle,
+  );
+  $entity = registration_entity_registration_bundle($info);
+  $status = registration_entity_registration_status($info);
   $form = array();
   $form['entity_type'] = array(
     '#type' => 'hidden',

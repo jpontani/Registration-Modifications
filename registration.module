@@ -397,7 +397,7 @@ function registration_entity_slots_available($entity) {
  *   Allowed keys are:
  *     id, type, bundle
  */
-function registration_entity_registration_bundle($entity) {
+function registration_entity_registration_bundle($entity, $check_global = TRUE) {
   if (!isset($entity['id'])) {
     $entity['id'] = 0;
   }
@@ -409,7 +409,7 @@ function registration_entity_registration_bundle($entity) {
     ->execute()
     ->fetchCol();
   if (count($q) == 0) {
-    if ($entity['id'] != 0) {
+    if ($entity['id'] != 0 && $check_global) {
       // No settings found on a per-entity basis, check global entity settings
       unset($entity['id']);
       return registration_entity_registration_bundle($entity);
@@ -427,7 +427,7 @@ function registration_entity_registration_bundle($entity) {
  *   Allowed keys are:
  *     id, type, bundle
  */
-function registration_entity_registration_status($entity) {
+function registration_entity_registration_status($entity, $check_global = TRUE) {
   if (!isset($entity['id'])) {
     $entity['id'] = 0;
   }
@@ -439,7 +439,7 @@ function registration_entity_registration_status($entity) {
     ->execute()
     ->fetchCol();
   if (count($q) == 0) {
-    if ($entity['id'] != 0) {
+    if ($entity['id'] != 0 && $check_global) {
       // No settings found on a per-entity basis, check global entity settings
       unset($entity['id']);
       return registration_entity_registration_status($entity);
