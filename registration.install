@@ -232,3 +232,82 @@ function registration_schema() {
 
   return $schema;
 }
+
+/**
+ * Implements hook_update_N().
+ */
+function registration_update_7001() {
+  db_change_field('registration', 'status', 'status', array(
+    'status' => array(
+      'description' => 'The status of this registration.',
+      'type' => 'varchar',
+      'not null' => TRUE,
+      'length' => 50,
+      'default' => 'pending',
+    ))
+  );
+  
+  db_create_table('registration_status', array(
+    'description' => 'Custom registration statuses.',
+    'fields' => array(
+      'status_key' => array(
+        'description' => 'Unique key for the status.',
+        'type' => 'varchar',
+        'length' => 50,
+        'not null' => TRUE,
+      ),
+      'status_name'=> array(
+        'description' => 'Human readable status text.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('status_key'),
+  ));
+  db_create_table('registration_status_entity', array(
+    'description' => 'Attaches registration statuses to entities.',
+    'fields' => array(
+      'entity_id' => array(
+        'description' => 'Entity ID our status is attached to.',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'entity_type' => array(
+        'description' => 'Entity type our status is attached to.',
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+      ),
+      'entity_bundle' => array(
+        'description' => 'Entity bundle our status is attached to.',
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+      ),
+      'status_key' => array(
+        'description' => 'Unique key for the status.',
+        'type' => 'varchar',
+        'length' => 50,
+        'not null' => TRUE,
+      ),
+      'settings' => array(
+        'description' => 'Serialized object of our status settings.',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+      ),
+    ),
+    'primary key' => array('entity_id', 'entity_type', 'entity_bundle', 'status_key'),
+  ));
+  
+  db_insert('registration_status', 'rs')->fields('rs', array('status_key' => 'waitlist', 'status_name' => 'Wait Listed'))->execute();
+  db_insert('registration_status', 'rs')->fields('rs', array('status_key' => 'pending', 'status_name' => 'Pending'))->execute();
+  db_insert('registration_status', 'rs')->fields('rs', array('status_key' => 'confirm', 'status_name' => 'Confirmed'))->execute();
+  
+  db_update('registration')
+    ->fields('status', 'pending')
+    ->condition('status', 0)
+    ->execute();
+}
