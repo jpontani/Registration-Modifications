@@ -302,12 +302,22 @@ function registration_update_7001() {
     'primary key' => array('entity_id', 'entity_type', 'entity_bundle', 'status_key'),
   ));
   
+  // Prepopulate status definitions
   db_insert('registration_status', 'rs')->fields('rs', array('status_key' => 'waitlist', 'status_name' => 'Wait Listed'))->execute();
   db_insert('registration_status', 'rs')->fields('rs', array('status_key' => 'pending', 'status_name' => 'Pending'))->execute();
   db_insert('registration_status', 'rs')->fields('rs', array('status_key' => 'confirm', 'status_name' => 'Confirmed'))->execute();
-  
+
+  // Update registration statuses to reflect new custom status texts.
+  db_update('registration')
+    ->fields('status', 'waitlist')
+    ->condition('status', -1)
+    ->execute();
   db_update('registration')
     ->fields('status', 'pending')
     ->condition('status', 0)
+    ->execute();
+  db_update('registration')
+    ->fields('status', 'confirm')
+    ->condition('status', 1)
     ->execute();
 }
