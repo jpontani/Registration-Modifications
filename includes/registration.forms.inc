@@ -18,6 +18,12 @@ function registration_form($form, &$form_state, $registration, $entity, $type) {
   
   $data = entity_extract_ids($type, $entity);
 
+  $entity_info = array(
+    'id' => $data[0],
+    'type' => $type,
+    'bundle' => $data[2],
+  );
+
   global $user;
   $form['email'] = array(
     '#type' => 'textfield',
@@ -29,11 +35,11 @@ function registration_form($form, &$form_state, $registration, $entity, $type) {
     '#required' => TRUE,
   );
 
-  $settings  = registration_entity_settings($entity, $type);
+  $settings  = registration_entity_settings($entity_info);
   $capacity  = $settings['capacity'];
   $remaining = 20;
   if ($capacity) {
-    $remaining = $capacity - registration_event_count($entity);
+    $remaining = $capacity - registration_event_count($entity_info);
   }
   $options = array();
   for ($i = 1; $i < $remaining + 1; $i++) {
@@ -45,8 +51,8 @@ function registration_form($form, &$form_state, $registration, $entity, $type) {
     '#description' => t('Select the number of registrations you want to create.'),
     '#options' => $options,
     '#default_value' => 1,
-    '#access' => isset($settings['settings']['multiple_registrations']) ?
-        $settings['settings']['multiple_registrations'] : FALSE,
+    '#access' => isset($settings['multiple_registrations']) ?
+        $settings['multiple_registrations'] : FALSE,
   );
 
 
@@ -93,8 +99,13 @@ function registration_form_validate($form, &$form_state) {
   $type = $form_state['entity_type'];
   $registration = $form_state['registration'];
   $data = entity_extract_ids($type, $entity);
+  $entity_info = array(
+    'id' => $data[0],
+    'type' => $type,
+    'bundle' => $data[2],
+  );
   // verify the event hasn't sold out
-  if (!registration_has_room($entity)) {
+  if (!registration_has_room($entity_info)) {
     drupal_set_message(t('Sorry, this event has sold out during your registration.'));
   }
 
@@ -252,7 +263,7 @@ function registration_registrations_settings_form($form, &$form_state, $entity, 
     'bundle' => $data[2],
   );
 
-  $settings = registration_entity_settings($entity_info, $type);
+  $settings = registration_entity_settings($entity_info);
   
   $form['status'] = array(
     '#type' => 'checkbox',
@@ -337,15 +348,15 @@ function registration_registrations_settings_form($form, &$form_state, $entity, 
     '#type' => 'checkbox',
     '#title' => t('Allow multiple registrations'),
     '#description' => t('If selected, users can register for more than one slot for this event.'),
-    '#default_value' => isset($settings['settings']['multiple_registrations']) ? $settings['settings']['multiple_registrations'] : -1,
+    '#default_value' => isset($settings['multiple_registrations']) ? $settings['multiple_registrations'] : -1,
   );
   $form['settings']['from_address'] = array(
     '#type' => 'textfield',
     '#title' => t('From Address'),
     '#description' => t('From email address to use for confirmations, reminders, and broadcast emails.'),
     '#required' => TRUE,
-    '#default_value' => isset($settings['settings']['from_address']) ?
-      $settings['settings']['from_address'] :
+    '#default_value' => isset($settings['from_address']) ?
+      $settings['from_address'] :
       variable_get('site_mail', ini_get('sendmail_from')),
   );
 
