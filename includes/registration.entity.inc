@@ -9,7 +9,7 @@
  * Implements hook_entity_info().
  */
 function registration_entity_info() {
-  return array(
+  $entities = array(
     'registration' => array(
       'module' => 'registration',
       'label' => t('Registration'),
@@ -24,15 +24,7 @@ function registration_entity_info() {
       'bundle keys' => array(
         'bundle' => 'type',
       ),
-      'bundles' => array(
-        'registration' => array(
-          'label' => 'Registration',
-          'admin' => array(
-            'path' => 'admin/structure/registration/manage',
-            'access arguments' => array('administer registration'),
-          ),
-        ),
-      ),
+      'bundles' => array(),
       'view modes' => array(
         'full' => array(
           'label' => t('Full Registration'),
@@ -43,11 +35,23 @@ function registration_entity_info() {
       'token type' => 'registration',
     ),
   );
+
+  foreach (registration_entity_types() as $type => $info) {
+    $entities['registration']['bundles'][$type] = array(
+      'label' => $info->name,
+      'admin' => array(
+        'path' => 'admin/structure/registration/types/manage/' . $info->type,
+        'access arguments' => array('administer registration'),
+      ),
+    );
+  }
+
+  return $entities;
 }
 
 function registration_uri($registration) {
   return array(
-    'path' => 'registration/' . $registration->id,
+    'path' => 'registration/' . $registration->registration_id,
   );
 }
 
@@ -60,9 +64,7 @@ class RegistrationEntityClass extends Entity {
     parent::__construct($values, 'registration');
   }
 
-  /**
-   * Override buildContent() to add registration properties.
-   */
+  // Override buildContent() to add registration properties.
   public function buildContent($view_mode = 'full', $langcode = NULL) {
     // invoke theme handler to return markup for registration properties
     $content['registration'] = array(
@@ -93,14 +95,42 @@ function registration_entity_property_info_alter(&$info) {
     'type' => 'date',
     'schema field' => 'updated',
   );
-  $properties['nid'] = array(
-    'label' => t("Node"),
-    'description' => t("The node this registration is associated with."),
-    'type' => 'node',
-    'schema field' => 'nid',
-  );
 
   return $info;
+}
+
+/**
+ * Returns all the bundles for the registration entity.
+ */
+function registration_entity_types() {
+  $types = &drupal_static(__FUNCTION__);
+  if (empty($types)) {
+    // types array is empty, so lets load it
+    $types = array();
+
+    $tq = db_select('registration_type', 'rt')->fields('rt')->execute();
+    foreach ($tq as $row) {
+      $types[$row->type] = $row;
+    }
+  }
+  return $types;
+}
+
+/**
+ * Resets the cached list of registration types.
+ */
+function registration_entity_types_reset() {
+  $registration_types = &drupal_static('registration_entity_types');
+  $registration_types = NULL;
+}
+
+/**
+ * Loads a registration type.
+ */
+function registration_type_load($type) {
+  $types = registration_entity_types();
+  $type = str_replace('-', '_', $type);
+  return isset($types[$type]) ? $types[$type] : FALSE;
 }
 
 /**
@@ -174,23 +204,26 @@ function registration_save($registration) {
  * Implements hook_field_extra_fields().
  */
 function registration_field_extra_fields() {
-  // expose the email property on the fields and display settings forms.
-  $extra['registration']['registration'] = array(
-    'form' => array(
-      'mail' => array(
-        'label' => t('Email'),
-        'description' => t('Registrant\'s email address.'),
-        'weight' => 0,
+  $extra = array();
+
+  foreach (registration_entity_types() as $type => $reg_type) {
+    $extra['registration'][$type] = array(
+      'form' => array(
+        'email' => array(
+          'label' => t('Email'),
+          'description' => t('Registration module email form element'),
+          'weight' => -5,
+        ),
       ),
-    ),
-    'display' => array(
-      'mail' => array(
-        'label' => t('Email'),
-        'description' => t('Registrant\'s email address.'),
-        'weight' => 0,
+      'display' => array(
+        'email' => array(
+          'label' => t('Email'),
+          'description' => t("Registered User's Email Address"),
+          'weight' => -5,
+        ),
       ),
-    )
-  );
+    );
+  }
 
   return $extra;
 }

@@ -7,3 +7,5 @@ dependencies[] = entity
 
 files[] = includes/registration.entity.inc
 files[] = includes/registration.forms.inc
+files[] = includes/registration.admin.inc
+files[] = includes/registration.theme.inc
