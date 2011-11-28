@@ -25,6 +25,19 @@ function registration_views_data() {
   $tables['registration']['registration_id'] = array(
     'title' => t('Registration ID Number'),
     'help' => t('The unique identifier for the registration.'),
+    'field' => array(
+      'handler' => 'views_handler_field_numeric', 
+      'click sortable' => TRUE,
+    ), 
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ), 
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+    ),
   );
   $tables['registration']['type'] = array(
     'title' => t('Registration Bundle'), 
@@ -90,6 +103,9 @@ function registration_views_data() {
     'sort' => array(
       'handler' => 'views_handler_sort',
     ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+    ),
   );
   $tables['registration']['mail'] = array(
     'title' => t('Registration Email'), 
@@ -126,14 +142,14 @@ function registration_views_data() {
     'title' => t('User ID'),
     'help' => t('User ID of the registration submitter.'),
     'field' => array(
-      'handler' => 'views_handler_field_numeric', 
+      'handler' => 'views_handler_field_user', 
       'click sortable' => TRUE,
-    ), 
-    'filter' => array(
-      'handler' => 'views_handler_filter_numeric',
     ), 
     'sort' => array(
       'handler' => 'views_handler_sort',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_user_uid',
     ),
     'relationship' => array(
       'base' => 'users', 
