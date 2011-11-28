@@ -61,7 +61,7 @@ function registration_uri($registration) {
 class RegistrationEntityClass extends Entity {
 
   public function __construct(array$values = array(), $entityType = NULL) {
-    parent::__construct($values, 'registration');
+    parent::__construct($values, $entityType);
   }
 
   // Override buildContent() to add registration properties.
@@ -108,9 +108,26 @@ function registration_entity_types() {
     // types array is empty, so lets load it
     $types = array();
 
-    $tq = db_select('registration_type', 'rt')->fields('rt')->execute();
+    $hooks = module_invoke_all('registration_type_info');
+    foreach ($hooks as $bundle => $bundle_info) {
+      db_merge('registration_type', 'rt')
+        ->fields(array(
+          'name' => $bundle_info['title'],
+          'type' => $bundle,
+          'description' => $bundle_info['description'],
+          'created' => REQUEST_TIME,
+          'changed' => REQUEST_TIME,
+          ))
+        ->key(array('type' => $bundle))
+        ->updateExcept('created')
+        ->execute();
+    }
+
+    $tq = db_select('registration_type', 'rt')->fields('rt')->execute()->fetchAssoc();
     foreach ($tq as $row) {
-      $types[$row->type] = $row;
+      drupal_alter('registration_type_info', $row);
+      $type = $row['type'];
+      $types[$type] = $row;
     }
   }
   return $types;
@@ -152,10 +169,10 @@ function registration_load($registration_id) {
  *
  * @param $registration_ids
  * @param $conditions
- *   An array of conditions on the {redhen_contact} table in the form
+ *   An array of conditions on the {registration} table in the form
  *     'field' => $value.
  * @param $reset
- *   Whether to reset the internal contact loading cache.
+ *   Whether to reset the internal registration loading cache.
  *
  * @return
  *   An array of contact objects indexed by registration_id.
@@ -172,12 +189,22 @@ function registration_load_multiple($registration_ids = array(), $conditions = a
  * Deletes multiple registrations by ID.
  *
  * @param $registration_ids
- *   An array of contact IDs to delete.
+ *   An array of registration IDs to delete.
  *
  * @return
  *   TRUE on success, FALSE otherwise.
  */
 function registration_delete_multiple($registration_ids) {
+  if (is_array($registration_ids)) {
+    foreach ($registration_ids as $regid) {
+      $reg = registration_load($regid);
+      module_invoke_all('registration_delete', $reg);
+    }
+  }
+  else {
+    $reg = registration_load($registration_ids);
+    module_invoke_all('registration_delete', $reg);
+  }
   return entity_get_controller('registration')->delete($registration_ids);
 }
 
@@ -185,7 +212,7 @@ function registration_delete_multiple($registration_ids) {
  * Saves a registration.
  *
  * @param $registration
- *   The full contact object to save.
+ *   The full registration object to save.
  *
  * @return
  *   The saved registration object.
@@ -195,6 +222,13 @@ function registration_save($registration) {
   // Set the creation timestamp if not set.
   if (!isset($registration->created) || empty($registration->created)) {
     $registration->created = REQUEST_TIME;
+  }
+  
+  if (!isset($registration->registration_id)) {
+    module_invoke_all('registration_insert', $registration);
+  }
+  else {
+    module_invoke_all('registration_update', $registration);
   }
 
   return entity_get_controller('registration')->save($registration);

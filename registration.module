@@ -903,7 +903,7 @@ function registration_theme() {
  *  Array of default settings for a new entity registration association.
  */
 function registration_default_settings() {
-  return array(
+  $defaults = array(
     'capacity' => 0,
     'status' => 1,
     // unix timestamp of the closing date, default to one month from now
@@ -916,4 +916,8 @@ function registration_default_settings() {
     'notify' => 0,
     'notify_email' => array(),
   );
+
+  $defaults += module_invoke_all('registration_default_settings');
+
+  return $defaults;
 }

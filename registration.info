@@ -5,6 +5,7 @@ core = 7.x
 
 dependencies[] = entity
 
+files[] = includes/registration.api.inc
 files[] = includes/registration.entity.inc
 files[] = includes/registration.forms.inc
 files[] = includes/registration.admin.inc
