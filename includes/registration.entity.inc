@@ -108,6 +108,8 @@ function registration_entity_types() {
     // types array is empty, so lets load it
     $types = array();
 
+    // Get any custom module registration bundles from the hook and add them to
+    // the database or merge them with existing entries.
     $hooks = module_invoke_all('registration_type_info');
     foreach ($hooks as $bundle => $bundle_info) {
       db_merge('registration_type', 'rt')
@@ -125,6 +127,7 @@ function registration_entity_types() {
 
     $tq = db_select('registration_type', 'rt')->fields('rt')->execute()->fetchAssoc();
     foreach ($tq as $row) {
+      // Let modules alter the registration bundle info.
       drupal_alter('registration_type_info', $row);
       $type = $row['type'];
       $types[$type] = $row;
@@ -195,6 +198,7 @@ function registration_load_multiple($registration_ids = array(), $conditions = a
  *   TRUE on success, FALSE otherwise.
  */
 function registration_delete_multiple($registration_ids) {
+  // Let modules act on a registration about to be deleted.
   if (is_array($registration_ids)) {
     foreach ($registration_ids as $regid) {
       $reg = registration_load($regid);
@@ -223,7 +227,10 @@ function registration_save($registration) {
   if (!isset($registration->created) || empty($registration->created)) {
     $registration->created = REQUEST_TIME;
   }
-  
+
+  $ret = entity_get_controller('registration')->save($registration);
+
+  // Let other modules act on a registration insert or update.
   if (!isset($registration->registration_id)) {
     module_invoke_all('registration_insert', $registration);
   }
@@ -231,7 +238,7 @@ function registration_save($registration) {
     module_invoke_all('registration_update', $registration);
   }
 
-  return entity_get_controller('registration')->save($registration);
+  return $ret;
 }
 
 /**

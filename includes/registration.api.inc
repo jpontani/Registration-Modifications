@@ -4,6 +4,9 @@
  *   Provides hooks for Registrations.
  */
 
+/**
+ * Implements hook_hook_info().
+ */
 function registration_hook_info() {
   $hooks = array(
     'registration_default_settings' => array(
