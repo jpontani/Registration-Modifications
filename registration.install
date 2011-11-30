@@ -6,6 +6,45 @@
  */
 
 /**
+ * Implements hook_enable().
+ */
+function registration_enable() {
+  $settings = array(
+    'settings' => array(
+      'capacity' => 0,
+      'status' => 1,
+      'waitlist' => 0,
+      'waitlist_capacity' => 0,
+    ),
+    'reminders' => array(
+      'send_reminder' => 0,
+      'from_address' => '',
+      'times' => array(2*24*60, 7*24*60),
+      'subject' => '',
+      'template' => '',
+      'template_file' => '',
+      'html' => 0,
+    ),
+    'notifications' => array(
+      'send_notification' => 0,
+      'send_to' => array(),
+      'subject' => '',
+      'template' => '',
+      'template_file' => '',
+      'html' => 0,
+    )
+  );
+  variable_set('registration_default_settings', $settings);
+}
+
+/**
+ * Implements hook_disable().
+ */
+function registration_disable() {
+  variable_del('registration_default_settings');
+}
+
+/**
  * Implements hook_schema().
  */
 function registration_schema() {

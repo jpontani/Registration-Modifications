@@ -125,11 +125,11 @@ function registration_entity_types() {
         ->execute();
     }
 
-    $tq = db_select('registration_type', 'rt')->fields('rt')->execute()->fetchAssoc();
+    $tq = db_select('registration_type', 'rt')->fields('rt')->execute()->fetchAll();
     foreach ($tq as $row) {
       // Let modules alter the registration bundle info.
       drupal_alter('registration_type_info', $row);
-      $type = $row['type'];
+      $type = $row->type;
       $types[$type] = $row;
     }
   }

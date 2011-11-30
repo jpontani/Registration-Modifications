@@ -15,8 +15,8 @@ module_load_include('inc', 'registration', 'includes/registration.entity');
  */
 function registration_menu_alter(&$items) {
   foreach (registration_entity_types() as $type => $info) {
-    $items['admin/structure/registration/types/manage/' . $type . '/fields']['context'] = MENU_CONTEXT_INLINE;
-    $items['admin/structure/registration/types/manage/' . $type . '/display']['context'] = MENU_CONTEXT_INLINE;
+    $items['admin/structure/registration/types/manage/' . $type . '/fields']['context'] = MENU_CONTEXT_NONE | MENU_CONTEXT_INLINE;
+    $items['admin/structure/registration/types/manage/' . $type . '/display']['context'] = MENU_CONTEXT_NONE | MENU_CONTEXT_INLINE;
   }
 }
 
@@ -40,13 +40,14 @@ function registration_menu() {
     'access arguments' => array('administer registration'),
     'file' => 'includes/registration.admin.inc',
   );
-  $items['admin/structure/registration/settings'] = array(
-    'title' => 'Settings',
+  $items['admin/structure/registration/entities'] = array(
+    'title' => 'Entities',
     'description' => 'Manage Registration settings and types',
     'access arguments' => array('administer registration'),
     'page callback' => 'registration_admin_page',
     'file' => 'includes/registration.admin.inc',
     'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => 0,
   );
   $items['admin/structure/registration/types'] = array(
     'title' => 'Types',
@@ -55,6 +56,17 @@ function registration_menu() {
     'page callback' => 'registration_types_page',
     'access arguments' => array('administer registration'),
     'file' => 'includes/registration.admin.inc',
+    'weight' => 1,
+  );
+  $items['admin/structure/registration/settings'] = array(
+    'title' => 'Default Settings',
+    'description' => 'Manage Registration Types',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('registration_default_settings_form'),
+    'access arguments' => array('administer registration'),
+    'file' => 'includes/registration.admin.inc',
+    'weight' => 2,
   );
   $items['admin/structure/registration/types/add'] = array(
     'title' => 'Add a Registration Type',
@@ -928,6 +940,6 @@ function registration_default_settings() {
 function registration_views_api() {
   return array(
     'api' => 3,
-    'path' => drupal_get_path('module', 'registration') . '/includes/views';
+    'path' => drupal_get_path('module', 'registration') . '/includes/views',
   );
 }

@@ -63,8 +63,13 @@ function registration_admin_page() {
       );
       foreach ($data['bundles'] as $bundle => $bundle_data) {
         $link = $bundle_data['label'];
-        $status = registration_entity_registration_status($type, $bundle);
-        $usingtype = registration_entity_registration_bundle($type, $bundle);
+        $info = array(
+          'id' => 0,
+          'type' => $type,
+          'bundle' => $bundle,
+        );
+        $status = registration_entity_registration_status($info);
+        $usingtype = registration_entity_registration_bundle($info);
         $status = ($status ? 'Enabled' : 'Disabled');
         $status = l($status, 'admin/structure/registration/status/' . $type . '/' . $bundle) . ($status == 'Enabled' ? ' <small>(' . $usingtype . ')</small>' : '');
         $rows[] = array($link, $status);
@@ -292,6 +297,11 @@ function registration_admin_form_title($type, $action, $bundle = NULL) {
  * Entity registration status form callback.
  */
 function registration_status_form($form, $form_state, $type, $bundle) {
+  $info = array(
+    'id' => 0,
+    'type' => $type,
+    'bundle' => $bundle,
+  );
   $form = array();
 
   $form['type'] = array(
@@ -307,14 +317,14 @@ function registration_status_form($form, $form_state, $type, $bundle) {
   $form['status'] = array(
     '#type' => 'radios',
     '#title' => t('Status'),
-    '#default_value' => registration_entity_registration_status($type, $bundle),
+    '#default_value' => registration_entity_registration_status($info),
     '#options' => array('Disabled', 'Enabled'),
   );
 
   $form['registration_entity'] = array(
     '#type' => 'select',
     '#title' => t('Registration Type'),
-    '#default_value' => registration_entity_registration_bundle($type, $bundle),
+    '#default_value' => registration_entity_registration_bundle($info),
     '#options' => registration_bundle_options(),
   );
 
@@ -338,7 +348,7 @@ function registration_status_form_submit($form, &$form_state) {
     'bundle' => $bundle,
   );
   $settings = array(
-    'reg_bundle' => $form_state['values']['registration_entity'],
+    'registration_bundle' => $form_state['values']['registration_entity'],
     'settings' => serialize(registration_default_settings()),
   );
   registration_update_entity_settings($entity, $settings);
@@ -355,4 +365,170 @@ function registration_bundle_options() {
     $options[$type] = $info->name;
   }
   return $options;
+}
+
+/**
+ * Registration default settings landing page.
+ */
+function registration_default_settings_form($form, &$form_state) {
+  $settings = variable_get('registration_default_settings', array());
+
+  // Basic entity registration settings.
+  $form['settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Basic Settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+  $form['settings']['status'] = array(
+    '#parents' => array('settings', 'status'),
+    '#type' => 'checkbox',
+    '#title' => t('Allow Registrations'),
+    '#default_value' => $settings['settings']['status'],
+  );
+  $form['settings']['capacity'] = array(
+    '#parents' => array('settings', 'capacity'),
+    '#type' => 'textfield',
+    '#title' => t('Capacity'),
+    '#description' => t('Setting capacity to 0 removes the registration limit.'),
+    '#default_value' => $settings['settings']['capacity'],
+  );
+  $form['settings']['waitlist'] = array(
+    '#parents' => array('settings', 'waitlist'),
+    '#type' => 'checkbox',
+    '#title' => t('Waitlist'),
+    '#default_value' => $settings['settings']['waitlist'],
+  );
+  $form['settings']['waitlist_capacity'] = array(
+    '#parents' => array('settings', 'waitlist_capacity'),
+    '#type' => 'textfield',
+    '#title' => t('Waitlist Capacity'),
+    '#description' => t('Setting capacity to 0 removes the waitlist registration limit.'),
+    '#default_value' => $settings['settings']['waitlist_capacity'],
+  );
+
+  // Notification settings.
+  $form['notifications'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Notification Settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['notifications']['send_notification'] = array(
+    '#parents' => array('notifications', 'send_notification'),
+    '#title' => t('Send Notification Emails'),
+    '#type' => 'checkbox',
+    '#default_value' => $settings['notifications']['send_notification'],
+  );
+  $form['notifications']['subject'] = array(
+    '#parents' => array('notifications', 'subject'),
+    '#title' => t('Notification Email Subject'),
+    '#type' => 'textfield',
+    '#default_value' => $settings['notifications']['subject'],
+  );
+  $form['notifications']['template'] = array(
+    '#parents' => array('notifications', 'template'),
+    '#title' => t('Notification Email Template'),
+    '#type' => 'textarea',
+    '#default_value' => $settings['notifications']['template'],
+  );
+  $form['notifications']['template_file'] = array(
+    '#parents' => array('notifications', 'template_file'),
+    '#title' => t('Notification Email Template File'),
+    '#type' => 'select',
+    '#options' => registration_template_options(),
+    '#default_value' => $settings['notifications']['template_file'],
+  );
+  $form['notifications']['html'] = array(
+    '#parents' => array('notifications', 'html'),
+    '#title' => t('Send Notification Email as HTML'),
+    '#type' => 'checkbox',
+    '#default_value' => $settings['notifications']['html'],
+  );
+
+  // Reminder settings.
+  $form['reminders'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Reminder Settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['reminders']['send_reminder'] = array(
+    '#parents' => array('reminders', 'send_reminder'),
+    '#title' => t('Send Reminder Emails'),
+    '#type' => 'checkbox',
+    '#default_value' => $settings['reminders']['send_reminder'],
+  );
+  $form['reminders']['from_address'] = array(
+    '#parents' => array('reminders', 'from_address'),
+    '#title' => t('Reminder Email From Address'),
+    '#type' => 'textfield',
+    '#default_value' => $settings['reminders']['from_address'],
+  );
+  $form['reminders']['subject'] = array(
+    '#parents' => array('reminders', 'subject'),
+    '#title' => t('Reminder Email Subject'),
+    '#type' => 'textfield',
+    '#default_value' => $settings['reminders']['subject'],
+  );
+  $form['reminders']['template'] = array(
+    '#parents' => array('reminders', 'template'),
+    '#title' => t('Reminder Email Template'),
+    '#type' => 'textarea',
+    '#default_value' => $settings['reminders']['template'],
+  );
+  $form['reminders']['template_file'] = array(
+    '#parents' => array('reminders', 'template_file'),
+    '#title' => t('Email Template File'),
+    '#type' => 'select',
+    '#options' => registration_template_options(),
+    '#default_value' => $settings['reminders']['template_file'],
+  );
+  $form['reminders']['html'] = array(
+    '#parents' => array('reminders', 'html'),
+    '#title' => t('Send Reminder Email as HTML'),
+    '#type' => 'checkbox',
+    '#default_value' => $settings['reminders']['html'],
+  );
+
+  $form['actions'] = array(
+    '#type' => 'actions',
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => t('Save Defaults'),
+    ),
+    'cancel' => array(
+      '#type' => 'markup',
+      '#markup' => l('Cancel', '/admin/structure/registration/entities'),
+    ),
+  );
+  return $form;
+}
+
+/**
+ * Registration default settings form validate handler.
+ */
+function registration_default_settings_form_validate($form, &$form_state) {
+}
+
+/**
+ * Registration default settings form submit handler.
+ */
+function registration_default_settings_form_submit($form, &$form_state) {
+  dsm($form_state);
+  $defaults = variable_get('registration_default_settings', array());
+  $settings = array();
+  foreach ($form_state['values'] as $key => $value) {
+    if (is_array($form_state['values'][$key])) {
+      $settings[$key] = $value;
+    }
+  }
+  $defaults += $settings;
+  variable_set('registration_default_settings', $defaults);
+  drupal_set_message(t('Registration default settings saved.'));
+  drupal_goto('admin/structure/registration/entities');
+}
+
+function registration_template_options() {
+  return array();
 }
