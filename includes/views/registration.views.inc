@@ -12,6 +12,12 @@ function registration_views_data() {
 
   // Registrations table.
   $tables['registration']['table']['group'] = t('Registration');
+  $tables['registration']['table']['base'] = array(
+    'field' => 'registration_id',
+    'title' => t('Registration'),
+    'help' => t('A registration entity'),
+  );
+  $tables['registration']['table']['entity type'] = 'registration';
   $tables['registration']['table']['join'] = array(
     'registration_status' => array(
       'left_field' => 'status_key',
@@ -151,12 +157,7 @@ function registration_views_data() {
     'argument' => array(
       'handler' => 'views_handler_argument_user_uid',
     ),
-    'relationship' => array(
-      'base' => 'users', 
-      'field' => 'uid', 
-      'handler' => 'views_handler_relationship', 
-      'label' => t('User ID'),
-    ),
+
   );
   $tables['registration']['created'] = array(
     'title' => t('Created Date Timestamp'), 
