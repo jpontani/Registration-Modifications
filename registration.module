@@ -755,10 +755,15 @@ function registration_entity_settings($entity) {
  * Implements hook_mail().
  */
 function registration_mail($key, &$message, $params) {
-  $subject = $params['subject'];
-  $body = $params['message'];
-  $message['subject'] .= str_replace(array("\r", "\n"), '', $subject);
-  $message['body'][] = drupal_html_to_text($body);
+  if (module_exists('commerce_email')) {
+    commerce_email_mail($key, $message, $params);
+  }
+  else {
+    $subject = $params['subject'];
+    $body = $params['message'];
+    $message['subject'] .= str_replace(array("\r", "\n"), '', $subject);
+    $message['body'][] = drupal_html_to_text($body);
+  }
 }
 
 /**

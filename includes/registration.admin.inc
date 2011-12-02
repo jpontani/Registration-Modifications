@@ -121,6 +121,7 @@ function registration_type_form($form, &$form_state, $type = NULL) {
     '#type' => 'textfield',
     '#title' => 'Name',
     '#default_value' => $name,
+    '#required' => TRUE,
   );
   $form['bundle'] = array(
     '#type' => 'machine_name',
@@ -164,15 +165,26 @@ function registration_type_form_submit($form, $form_state) {
       field_attach_create_bundle('registration', $form_state['values']['bundle']);
       break;
     case 'edit':
+      $old = $form_state['values']['bundle_old'];
       unset($record->created);
-      $ret = drupal_write_record('registration_type', $record, array('type'));
+      db_update('registration_type')
+        ->condition('type', $old)
+        ->fields(
+          array(
+            'name' => $record->name,
+            'type' => $record->type,
+            'description' => $record->description,
+            'changed' => $record->changed,
+          )
+        )
+        ->execute();
       $msg = ' ' . t('updated.');
       field_attach_rename_bundle('registration', $form_state['values']['bundle_old'], $form_state['values']['bundle']);
       break;
   }
   entity_info_cache_clear();
   registration_entity_types_reset();
-  drupal_set_message(t('Registration entity <em>@type</em> has been @msg.'), array('@type' => $record->type, '@msg' => $msg));
+  drupal_set_message(t('Registration entity <em>@type</em> has been @msg', array('@type' => $record->type, '@msg' => $msg)));
   drupal_goto('admin/structure/registration/types');
 }
 
@@ -205,15 +217,13 @@ function registration_delete_type_form($form, $form_state, $type) {
     '#value' => $type,
   );
   $form['actions'] = array('#type' => 'actions');
-  $form['actions']['cancel'] = array(
-    '#type' => 'button',
-    '#value' => t('Cancel'),
-    '#submit' => array('registration_delete_type_form_cancel'),
-    '#executes_submit_callback' => FALSE,
-  );
   $form['actions']['delete'] = array(
     '#type' => 'submit',
     '#value' => t('Delete @type', array('@type' => $type)),
+  );
+  $form['actions']['cancel'] = array(
+    '#type' => 'markup',
+    '#markup' => l('Cancel', '/admin/structure/registration/types'),
   );
   return $form;
 }
@@ -229,20 +239,26 @@ function registration_delete_type_form_submit($form, $form_state) {
     ->execute();
   foreach ($regs as $entity_type => $entities) {
     foreach ($entities as $id => $entity) {
-      // delete all field values attached to each registration of this type
+      // Delete all field values attached to each registration of this type.
       $reg = registration_load($id);
       field_attach_delete('registration', $reg);
       entity_delete('registration', $id);
     }
   }
-  // notify field api that this registration bundle is being deleted
+  // Notify field api that this registration bundle is being deleted.
   field_attach_delete_bundle('registration', $reg_type);
-  // we reset all entities that use this registration bundle to no bundle and
-  // set registration status to disabled
+  // We reset all entities that use this registration bundle to no bundle and
+  // set registration status to disabled.
   registration_reset_status_with_type($reg_type);
-  // go ahead and delete the type from the DB
-  db_delete('registration_type')->condition('type', $reg_type)->execute();
-  // reset our cache of registration bundles
+  // Go ahead and delete the type from the DB.
+  db_delete('registration_type')
+    ->condition('type', $reg_type)
+    ->execute();
+  // Delete entity attachments with this registration bundle.
+  db_delete('registration_attach')
+    ->condition('registration_bundle', $reg_type)
+    ->execute();
+  // Reset our cache of registration bundles.
   registration_entity_types_reset();
   drupal_set_message(t('The registration bundle <em>@type</em> has been deleted.', array('@type' => $reg_type)));
   drupal_goto('admin/structure/registration/types');
@@ -267,13 +283,6 @@ function registration_reset_status_with_type($reg_type) {
       variable_set($bundle_key, 0);
     }
   }
-}
-
-/**
- * Callback for cancel delete button click.
- */
-function registration_delete_type_form_cancel($form, $form_state) {
-  drupal_goto('admin/structure/registration/types');
 }
 
 /**
@@ -352,7 +361,6 @@ function registration_status_form_submit($form, &$form_state) {
     'settings' => serialize(registration_default_settings()),
   );
   registration_update_entity_settings($entity, $settings);
-  drupal_set_message(t('Registration settings updated for @type.', array('@type' => $type)));
   drupal_goto('admin/structure/registration');
 }
 
@@ -374,6 +382,8 @@ function registration_default_settings_form($form, &$form_state) {
   $settings = variable_get('registration_default_settings', array());
   $mime = !module_exists('mime_mail');
   $mimemsg = t('(requires the Mime Mail module)');
+  
+  $commerce = module_exists('commerce_email');
 
   // Basic entity registration settings.
   $form['settings'] = array(
@@ -422,33 +432,41 @@ function registration_default_settings_form($form, &$form_state) {
     '#type' => 'checkbox',
     '#default_value' => $settings['notifications']['send_notification'],
   );
-  $form['notifications']['subject'] = array(
-    '#parents' => array('notifications', 'subject'),
-    '#title' => t('Notification Email Subject'),
-    '#type' => 'textfield',
-    '#default_value' => $settings['notifications']['subject'],
-  );
-  $form['notifications']['template'] = array(
-    '#parents' => array('notifications', 'template'),
-    '#title' => t('Notification Email Template'),
-    '#type' => 'textarea',
-    '#default_value' => $settings['notifications']['template'],
-  );
-  $form['notifications']['template_file'] = array(
-    '#parents' => array('notifications', 'template_file'),
-    '#title' => t('Notification Email Template File'),
-    '#type' => 'select',
-    '#options' => registration_template_options(),
-    '#default_value' => $settings['notifications']['template_file'],
-  );
-  $form['notifications']['html'] = array(
-    '#parents' => array('notifications', 'html'),
-    '#title' => t('Send Notification Email as HTML'),
-    '#description' => $mimemsg,
-    '#type' => 'checkbox',
-    '#disabled' => $mime,
-    '#default_value' => $settings['notifications']['html'],
-  );
+  if (!$commerce) {
+    $form['notifications']['subject'] = array(
+      '#parents' => array('notifications', 'subject'),
+      '#title' => t('Notification Email Subject'),
+      '#type' => 'textfield',
+      '#default_value' => $settings['notifications']['subject'],
+    );
+    $form['notifications']['template'] = array(
+      '#parents' => array('notifications', 'template'),
+      '#title' => t('Notification Email Template'),
+      '#type' => 'textarea',
+      '#default_value' => $settings['notifications']['template'],
+    );
+    $form['notifications']['template_file'] = array(
+      '#parents' => array('notifications', 'template_file'),
+      '#title' => t('Notification Email Template File'),
+      '#type' => 'select',
+      '#options' => registration_template_options(),
+      '#default_value' => $settings['notifications']['template_file'],
+    );
+    $form['notifications']['html'] = array(
+      '#parents' => array('notifications', 'html'),
+      '#title' => t('Send Notification Email as HTML'),
+      '#description' => $mimemsg,
+      '#type' => 'checkbox',
+      '#disabled' => $mime,
+      '#default_value' => $settings['notifications']['html'],
+    );
+  }
+  else {
+    $form['notifications']['commerce_notification'] = array(
+      '#type' => 'markup',
+      '#markup' => l('Notification Email Settings from Commerce Email', 'admin/commerce/config/email'),
+    );
+  }
 
   // Reminder settings.
   $form['reminders'] = array(
@@ -463,39 +481,47 @@ function registration_default_settings_form($form, &$form_state) {
     '#type' => 'checkbox',
     '#default_value' => $settings['reminders']['send_reminder'],
   );
-  $form['reminders']['from_address'] = array(
-    '#parents' => array('reminders', 'from_address'),
-    '#title' => t('Reminder Email From Address'),
-    '#type' => 'textfield',
-    '#default_value' => $settings['reminders']['from_address'],
-  );
-  $form['reminders']['subject'] = array(
-    '#parents' => array('reminders', 'subject'),
-    '#title' => t('Reminder Email Subject'),
-    '#type' => 'textfield',
-    '#default_value' => $settings['reminders']['subject'],
-  );
-  $form['reminders']['template'] = array(
-    '#parents' => array('reminders', 'template'),
-    '#title' => t('Reminder Email Template'),
-    '#type' => 'textarea',
-    '#default_value' => $settings['reminders']['template'],
-  );
-  $form['reminders']['template_file'] = array(
-    '#parents' => array('reminders', 'template_file'),
-    '#title' => t('Email Template File'),
-    '#type' => 'select',
-    '#options' => registration_template_options(),
-    '#default_value' => $settings['reminders']['template_file'],
-  );
-  $form['reminders']['html'] = array(
-    '#parents' => array('reminders', 'html'),
-    '#title' => t('Send Reminder Email as HTML') . $mimemsg,
-    '#type' => 'checkbox',
-    '#disabled' => $mime,
-    '#description' => $mimemsg,
-    '#default_value' => $settings['reminders']['html'],
-  );
+  if (!$commerce) {
+    $form['reminders']['from_address'] = array(
+      '#parents' => array('reminders', 'from_address'),
+      '#title' => t('Reminder Email From Address'),
+      '#type' => 'textfield',
+      '#default_value' => $settings['reminders']['from_address'],
+    );
+    $form['reminders']['subject'] = array(
+      '#parents' => array('reminders', 'subject'),
+      '#title' => t('Reminder Email Subject'),
+      '#type' => 'textfield',
+      '#default_value' => $settings['reminders']['subject'],
+    );
+    $form['reminders']['template'] = array(
+      '#parents' => array('reminders', 'template'),
+      '#title' => t('Reminder Email Template'),
+      '#type' => 'textarea',
+      '#default_value' => $settings['reminders']['template'],
+    );
+    $form['reminders']['template_file'] = array(
+      '#parents' => array('reminders', 'template_file'),
+      '#title' => t('Email Template File'),
+      '#type' => 'select',
+      '#options' => registration_template_options(),
+      '#default_value' => $settings['reminders']['template_file'],
+    );
+    $form['reminders']['html'] = array(
+      '#parents' => array('reminders', 'html'),
+      '#title' => t('Send Reminder Email as HTML') . $mimemsg,
+      '#type' => 'checkbox',
+      '#disabled' => $mime,
+      '#description' => $mimemsg,
+      '#default_value' => $settings['reminders']['html'],
+    );
+  }
+  else {
+    $form['reminders']['commerce_reminder'] = array(
+      '#type' => 'markup',
+      '#markup' => l('Reminder Email Settings from Commerce Email', 'admin/commerce/config/email'),
+    );
+  }
 
   $form['actions'] = array(
     '#type' => 'actions',

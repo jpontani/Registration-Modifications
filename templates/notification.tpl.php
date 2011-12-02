@@ -1,4 +1,4 @@
-This a notification that someone registered for %event_title on %registration_date.
+This a notification that someone registered for <?php print $event->title; ?> on <?php print $registration->created; ?>.
 
 The following information was submitted:
-%registration
+<?php print $registration->values; ?>
