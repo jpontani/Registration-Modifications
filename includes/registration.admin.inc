@@ -372,6 +372,8 @@ function registration_bundle_options() {
  */
 function registration_default_settings_form($form, &$form_state) {
   $settings = variable_get('registration_default_settings', array());
+  $mime = !module_exists('mime_mail');
+  $mimemsg = t('(requires the Mime Mail module)');
 
   // Basic entity registration settings.
   $form['settings'] = array(
@@ -412,7 +414,7 @@ function registration_default_settings_form($form, &$form_state) {
     '#type' => 'fieldset',
     '#title' => t('Notification Settings'),
     '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+    '#collapsed' => !$settings['notifications']['send_notification'],
   );
   $form['notifications']['send_notification'] = array(
     '#parents' => array('notifications', 'send_notification'),
@@ -442,7 +444,9 @@ function registration_default_settings_form($form, &$form_state) {
   $form['notifications']['html'] = array(
     '#parents' => array('notifications', 'html'),
     '#title' => t('Send Notification Email as HTML'),
+    '#description' => $mimemsg,
     '#type' => 'checkbox',
+    '#disabled' => $mime,
     '#default_value' => $settings['notifications']['html'],
   );
 
@@ -451,7 +455,7 @@ function registration_default_settings_form($form, &$form_state) {
     '#type' => 'fieldset',
     '#title' => t('Reminder Settings'),
     '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+    '#collapsed' => !$settings['reminders']['send_reminder'],
   );
   $form['reminders']['send_reminder'] = array(
     '#parents' => array('reminders', 'send_reminder'),
@@ -486,8 +490,10 @@ function registration_default_settings_form($form, &$form_state) {
   );
   $form['reminders']['html'] = array(
     '#parents' => array('reminders', 'html'),
-    '#title' => t('Send Reminder Email as HTML'),
+    '#title' => t('Send Reminder Email as HTML') . $mimemsg,
     '#type' => 'checkbox',
+    '#disabled' => $mime,
+    '#description' => $mimemsg,
     '#default_value' => $settings['reminders']['html'],
   );
 
@@ -515,20 +521,29 @@ function registration_default_settings_form_validate($form, &$form_state) {
  * Registration default settings form submit handler.
  */
 function registration_default_settings_form_submit($form, &$form_state) {
-  dsm($form_state);
-  $defaults = variable_get('registration_default_settings', array());
   $settings = array();
   foreach ($form_state['values'] as $key => $value) {
     if (is_array($form_state['values'][$key])) {
       $settings[$key] = $value;
     }
   }
-  $defaults += $settings;
-  variable_set('registration_default_settings', $defaults);
+  variable_set('registration_default_settings', $settings);
   drupal_set_message(t('Registration default settings saved.'));
   drupal_goto('admin/structure/registration/entities');
 }
 
+/**
+ * Returns list of email template files.
+ *
+ * @return
+ *  Array of email template filenames keyed by URI.
+ */
 function registration_template_options() {
-  return array();
+  $base_dir = drupal_get_path('module', 'registration') . '/templates';
+  $files = file_scan_directory($base_dir, '/.*\.tpl\.php$/');
+  $file_array = array('' => "Don't Use a Template File");
+  foreach ($files as $uri => $file) {
+    $file_array[$file->uri] = $file->filename;
+  }
+  return $file_array;
 }
