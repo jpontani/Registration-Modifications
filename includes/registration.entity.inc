@@ -112,6 +112,9 @@ function registration_entity_types() {
     // the database or merge them with existing entries.
     $hooks = module_invoke_all('registration_type_info');
     foreach ($hooks as $bundle => $bundle_info) {
+      // Let modules alter the registration bundle info.
+      $info = array($bundle => $bundle_info);
+      drupal_alter('registration_type_info', $info);
       db_merge('registration_type', 'rt')
         ->fields(array(
           'name' => $bundle_info['title'],
@@ -125,10 +128,11 @@ function registration_entity_types() {
         ->execute();
     }
 
-    $tq = db_select('registration_type', 'rt')->fields('rt')->execute()->fetchAll();
+    $tq = db_select('registration_type', 'rt')
+      ->fields('rt')
+      ->execute()
+      ->fetchAll();
     foreach ($tq as $row) {
-      // Let modules alter the registration bundle info.
-      drupal_alter('registration_type_info', $row);
       $type = $row->type;
       $types[$type] = $row;
     }

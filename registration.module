@@ -383,7 +383,7 @@ function registration_form_alter(&$form, &$form_state, $form_id) {
  */
 function registration_entity_slots_available($entity) {
   $capacity = registration_entity_settings($entity);
-  $capacity = $capacity['capacity'];
+  $capacity = $capacity['settings']['capacity'];
   $result = db_select('registration', 'r')
     ->fields('r')
     ->condition('entity_type', $entity['type'])
@@ -462,7 +462,7 @@ function registration_entity_registration_status($entity, $check_global = TRUE) 
   if (!is_array($settings)) {
     $settings = unserialize($settings);
   }
-  return $settings['status'];
+  return $settings['settings']['status'];
 }
 
 /**

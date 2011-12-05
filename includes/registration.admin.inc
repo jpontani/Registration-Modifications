@@ -418,6 +418,22 @@ function registration_default_settings_form($form, &$form_state) {
     '#description' => t('Setting capacity to 0 removes the waitlist registration limit.'),
     '#default_value' => $settings['settings']['waitlist_capacity'],
   );
+  $form['settings']['open_date'] = array(
+    '#parents' => array('settings', 'open_date'),
+    '#type' => 'textfield',
+    '#title' => t('Open Date'),
+    '#description' => t('Default open date format, as utilized by PHP\'s !link function.',
+      array('!link' => l('strtotime()', 'http://php.net/manual/en/function.strtotime.php'))),
+    '#default_value' => $settings['settings']['open_date'],
+  );
+  $form['settings']['close_date'] = array(
+    '#parents' => array('settings', 'close_date'),
+    '#type' => 'textfield',
+    '#title' => t('Close Date'),
+    '#description' => t('Default close date format, as utilized by PHP\'s !link function.',
+      array('!link' => l('strtotime()', 'http://php.net/manual/en/function.strtotime.php'))),
+    '#default_value' => $settings['settings']['close_date'],
+  );
 
   // Notification settings.
   $form['notifications'] = array(
