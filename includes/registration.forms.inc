@@ -488,6 +488,7 @@ function registration_register_entity_form($form, &$form_state, $type, $bundle, 
   );
   $entity = registration_entity_registration_bundle($info);
   $status = registration_entity_registration_status($info);
+  $settings = registration_entity_settings($info);
   $form = array();
   $form['entity_type'] = array(
     '#type' => 'hidden',
@@ -517,7 +518,9 @@ function registration_register_entity_form($form, &$form_state, $type, $bundle, 
     );
     return $form;
   }
-  if (is_string($entity)) {
+  $open_date = $settings['settings']['open_date'];
+  $close_date = $settings['settings']['close_date'];
+  if (REQUEST_TIME >= $open_date && REQUEST_TIME <= $close_date && is_string($entity)) {
     $etype = $entity;
     $entity = entity_create('registration', array('type' => $etype));
     $entity->entity_type = $type;
@@ -549,6 +552,22 @@ function registration_register_entity_form($form, &$form_state, $type, $bundle, 
       ),
     );
     field_attach_form('registration', $entity, $form['registration'], $form_state);
+    return $form;
+  }
+  else {
+    $form += array(
+      'invalid' => array(
+        '#type' => 'markup',
+        '#markup' => t('Registrations for this item are currently closed.'),
+      ),
+      'actions' => array(
+        '#type' => 'actions',
+        'goback' => array(
+          '#type' => 'button',
+          '#value' => t('Go Back'),
+        ),
+      ),
+    );
     return $form;
   }
 }
