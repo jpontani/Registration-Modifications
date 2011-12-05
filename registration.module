@@ -266,7 +266,7 @@ function registration_page_title($registration) {
  *
  * Add registration options to node type form.
  */
-function registration_form_node_type_form_alter(&$form, &$form_state) {
+function registration_form_node_type_form_alter_old(&$form, &$form_state) {
   if (!function_exists('registration_bundle_options')) {
     module_load_include('inc', 'registration', 'includes/registration.admin');
   }

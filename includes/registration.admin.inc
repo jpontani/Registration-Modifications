@@ -379,7 +379,33 @@ function registration_bundle_options() {
  * Registration default settings landing page.
  */
 function registration_default_settings_form($form, &$form_state) {
-  $settings = variable_get('registration_default_settings', array());
+  $form = registration_default_settings_base_form();
+
+  $form['actions'] = array(
+    '#type' => 'actions',
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => t('Save Defaults'),
+    ),
+    'cancel' => array(
+      '#type' => 'markup',
+      '#markup' => l('Cancel', '/admin/structure/registration/entities'),
+    ),
+  );
+  return $form;
+}
+
+/**
+ * Returns the base form fields for registration settings.
+ *
+ * @param $parent
+ *   Array of form parents, if applicable. This allows form nesting for use on
+ *   other forms outside of the Registration module.
+ */
+function registration_default_settings_base_form($parent = NULL, $settings = array()) {
+  if (empty($settings)) {
+    $settings = variable_get('registration_default_settings', array());
+  }
   $mime = !module_exists('mime_mail');
   $mimemsg = t('(requires the Mime Mail module)');
   
@@ -391,35 +417,37 @@ function registration_default_settings_form($form, &$form_state) {
     '#title' => t('Basic Settings'),
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
+    '#tree' => TRUE,
+    '#parents' => array_merge($parent, array('settings')),
   );
   $form['settings']['status'] = array(
-    '#parents' => array('settings', 'status'),
+    '#parents' => array_merge($parent, array('settings', 'status')),
     '#type' => 'checkbox',
     '#title' => t('Allow Registrations'),
     '#default_value' => $settings['settings']['status'],
   );
   $form['settings']['capacity'] = array(
-    '#parents' => array('settings', 'capacity'),
+    '#parents' => array_merge($parent, array('settings', 'capacity')),
     '#type' => 'textfield',
     '#title' => t('Capacity'),
     '#description' => t('Setting capacity to 0 removes the registration limit.'),
     '#default_value' => $settings['settings']['capacity'],
   );
   $form['settings']['waitlist'] = array(
-    '#parents' => array('settings', 'waitlist'),
+    '#parents' => array_merge($parent, array('settings', 'waitlist')),
     '#type' => 'checkbox',
     '#title' => t('Waitlist'),
     '#default_value' => $settings['settings']['waitlist'],
   );
   $form['settings']['waitlist_capacity'] = array(
-    '#parents' => array('settings', 'waitlist_capacity'),
+    '#parents' => array_merge($parent, array('settings', 'waitlist_capacity')),
     '#type' => 'textfield',
     '#title' => t('Waitlist Capacity'),
     '#description' => t('Setting capacity to 0 removes the waitlist registration limit.'),
     '#default_value' => $settings['settings']['waitlist_capacity'],
   );
   $form['settings']['open_date'] = array(
-    '#parents' => array('settings', 'open_date'),
+    '#parents' => array_merge($parent, array('settings', 'open_date')),
     '#type' => 'textfield',
     '#title' => t('Open Date'),
     '#description' => t('Default open date format, as utilized by PHP\'s !link function.',
@@ -427,7 +455,7 @@ function registration_default_settings_form($form, &$form_state) {
     '#default_value' => $settings['settings']['open_date'],
   );
   $form['settings']['close_date'] = array(
-    '#parents' => array('settings', 'close_date'),
+    '#parents' => array_merge($parent, array('settings', 'close_date')),
     '#type' => 'textfield',
     '#title' => t('Close Date'),
     '#description' => t('Default close date format, as utilized by PHP\'s !link function.',
@@ -440,36 +468,38 @@ function registration_default_settings_form($form, &$form_state) {
     '#type' => 'fieldset',
     '#title' => t('Notification Settings'),
     '#collapsible' => TRUE,
+    '#tree' => TRUE,
     '#collapsed' => !$settings['notifications']['send_notification'],
+    '#parents' => array_merge($parent, array('notifications')),
   );
   $form['notifications']['send_notification'] = array(
-    '#parents' => array('notifications', 'send_notification'),
+    '#parents' => array_merge($parent, array('notifications', 'send_notification')),
     '#title' => t('Send Notification Emails'),
     '#type' => 'checkbox',
     '#default_value' => $settings['notifications']['send_notification'],
   );
   if (!$commerce) {
     $form['notifications']['subject'] = array(
-      '#parents' => array('notifications', 'subject'),
+      '#parents' => array_merge($parent, array('notifications', 'subject')),
       '#title' => t('Notification Email Subject'),
       '#type' => 'textfield',
       '#default_value' => $settings['notifications']['subject'],
     );
     $form['notifications']['template'] = array(
-      '#parents' => array('notifications', 'template'),
+      '#parents' => array_merge($parent, array('notifications', 'template')),
       '#title' => t('Notification Email Template'),
       '#type' => 'textarea',
       '#default_value' => $settings['notifications']['template'],
     );
     $form['notifications']['template_file'] = array(
-      '#parents' => array('notifications', 'template_file'),
+      '#parents' => array_merge($parent, array('notifications', 'template_file')),
       '#title' => t('Notification Email Template File'),
       '#type' => 'select',
       '#options' => registration_template_options(),
       '#default_value' => $settings['notifications']['template_file'],
     );
     $form['notifications']['html'] = array(
-      '#parents' => array('notifications', 'html'),
+      '#parents' => array_merge($parent, array('notifications', 'html')),
       '#title' => t('Send Notification Email as HTML'),
       '#description' => $mimemsg,
       '#type' => 'checkbox',
@@ -487,44 +517,46 @@ function registration_default_settings_form($form, &$form_state) {
   // Reminder settings.
   $form['reminders'] = array(
     '#type' => 'fieldset',
+    '#tree' => TRUE,
     '#title' => t('Reminder Settings'),
     '#collapsible' => TRUE,
     '#collapsed' => !$settings['reminders']['send_reminder'],
+    '#parents' => array_merge($parent, array('reminders')),
   );
   $form['reminders']['send_reminder'] = array(
-    '#parents' => array('reminders', 'send_reminder'),
+    '#parents' => array_merge($parent, array('reminders', 'send_reminder')),
     '#title' => t('Send Reminder Emails'),
     '#type' => 'checkbox',
     '#default_value' => $settings['reminders']['send_reminder'],
   );
   if (!$commerce) {
     $form['reminders']['from_address'] = array(
-      '#parents' => array('reminders', 'from_address'),
+      '#parents' => array_merge($parent, array('reminders', 'from_address')),
       '#title' => t('Reminder Email From Address'),
       '#type' => 'textfield',
       '#default_value' => $settings['reminders']['from_address'],
     );
     $form['reminders']['subject'] = array(
-      '#parents' => array('reminders', 'subject'),
+      '#parents' => array_merge($parent, array('reminders', 'subject')),
       '#title' => t('Reminder Email Subject'),
       '#type' => 'textfield',
       '#default_value' => $settings['reminders']['subject'],
     );
     $form['reminders']['template'] = array(
-      '#parents' => array('reminders', 'template'),
+      '#parents' => array_merge($parent, array('reminders', 'template')),
       '#title' => t('Reminder Email Template'),
       '#type' => 'textarea',
       '#default_value' => $settings['reminders']['template'],
     );
     $form['reminders']['template_file'] = array(
-      '#parents' => array('reminders', 'template_file'),
+      '#parents' => array_merge($parent, array('reminders', 'template_file')),
       '#title' => t('Email Template File'),
       '#type' => 'select',
       '#options' => registration_template_options(),
       '#default_value' => $settings['reminders']['template_file'],
     );
     $form['reminders']['html'] = array(
-      '#parents' => array('reminders', 'html'),
+      '#parents' => array_merge($parent, array('reminders', 'html')),
       '#title' => t('Send Reminder Email as HTML') . $mimemsg,
       '#type' => 'checkbox',
       '#disabled' => $mime,
@@ -538,18 +570,6 @@ function registration_default_settings_form($form, &$form_state) {
       '#markup' => l('Reminder Email Settings from Commerce Email', 'admin/commerce/config/email'),
     );
   }
-
-  $form['actions'] = array(
-    '#type' => 'actions',
-    'submit' => array(
-      '#type' => 'submit',
-      '#value' => t('Save Defaults'),
-    ),
-    'cancel' => array(
-      '#type' => 'markup',
-      '#markup' => l('Cancel', '/admin/structure/registration/entities'),
-    ),
-  );
   return $form;
 }
 
