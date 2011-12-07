@@ -381,12 +381,26 @@ function registration_form_alter(&$form, &$form_state, $form_id) {
 }
 
 /**
+ * Returns a whether the entity has a registration limit.
+ *
+ * @param $entity
+ *   Associative array of entity identifying data.
+ *   Allowed keys are:
+ *     id, type, bundle.
+ */
+function registration_entity_has_capacity_limit($entity) {
+  $capacity = registration_entity_settings($entity);
+  $capacity = $capacity['settings']['capacity'];
+  return ($capacity == 0 ? FALSE : TRUE);
+}
+
+/**
  * Returns the number of slots available for the given entity.
  *
  * @param $entity
  *   Associate array of entity identifying data.
  *   Allowed keys are:
- *     id, type, bundle
+ *     id, type, bundle.
  */
 function registration_entity_slots_available($entity) {
   $capacity = registration_entity_settings($entity);

@@ -402,7 +402,7 @@ function registration_default_settings_form($form, &$form_state) {
  *   Array of form parents, if applicable. This allows form nesting for use on
  *   other forms outside of the Registration module.
  */
-function registration_default_settings_base_form($parent = NULL, $settings = array()) {
+function registration_default_settings_base_form($parent = array(), $settings = array()) {
   if (empty($settings)) {
     $settings = variable_get('registration_default_settings', array());
   }
