@@ -211,6 +211,14 @@ function registration_views_data() {
       'handler' => 'views_handler_filter_numeric',
     ),
   );
+  $tables['registration']['registration_attached_entity'] = array(
+    'real field' => 'eid',
+    'field' => array(
+      'title' => t("Attached Entity"),
+      'help' => t('The entity this registration is associated to.'),
+      'handler' => 'registration_handler_field_registration_entity',
+    ),
+  );
 
   // Registration status table.
 
