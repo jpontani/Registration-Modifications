@@ -381,12 +381,59 @@ function registration_form_alter(&$form, &$form_state, $form_id) {
 }
 
 /**
+ * Checks to see if the entity is accepting registrations.
+ */
+function registration_can_register($entity) {
+  $startok = FALSE;
+  $endok = FALSE;
+  $capacityok = FALSE;
+  $settings = registration_entity_settings($entity);
+  $start = $settings['settings']['open_date'];
+  $end = $settings['settings']['close_date'];
+  if (1 == $settings['settings']['status']) {
+    // check if the item has a capacity limit and there are slots available
+    if (registration_entity_has_capacity_limit($entity)) {
+      $capacityok = (registration_entity_slots_available($entity) == 0 ? FALSE : TRUE);
+    }
+    else {
+      // no capacity limit
+      $capacityok = TRUE;
+    }
+    // make sure times are within registration period
+    if (0 == $start || REQUEST_TIME >= $start) {
+      $startok = TRUE;
+    }
+    if (0 == $end || REQUEST_TIME <= $end) {
+      $endok = TRUE;
+    }
+    return ($startok && $endok && $capacityok);
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Returns a whether the entity has a registration limit.
+ *
+ * @param $entity
+ *   Associative array of entity identifying data.
+ *   Allowed keys are:
+ *     id, type, bundle.
+ */
+function registration_entity_has_capacity_limit($entity) {
+  $capacity = registration_entity_settings($entity);
+  $capacity = $capacity['settings']['capacity'];
+  return ($capacity == 0 ? FALSE : TRUE);
+}
+
+/**
  * Returns the number of slots available for the given entity.
  *
  * @param $entity
  *   Associate array of entity identifying data.
  *   Allowed keys are:
- *     id, type, bundle
+ *     id, type, bundle.
  */
 function registration_entity_slots_available($entity) {
   $capacity = registration_entity_settings($entity);

@@ -174,7 +174,7 @@ function registration_schema() {
       ),
     ),
     'unique keys' => array(
-      'eid_mail' => array('eid', 'mail'),
+      'entity_mail' => array('eid', 'entity_bundle', 'entity_type', 'mail'),
     ),
     'primary key' => array('registration_id'),
   );

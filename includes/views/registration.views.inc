@@ -27,6 +27,10 @@ function registration_views_data() {
       'left_field' => 'type',
       'field' => 'type',
     ),
+    'commerce_order' => array(
+      'left_field' => 'order_id',
+      'field' => 'order_id',
+    ),
   );
   $tables['registration']['registration_id'] = array(
     'title' => t('Registration ID Number'),
@@ -187,7 +191,26 @@ function registration_views_data() {
       'handler' => 'views_handler_filter_date',
     ),
   );
-  $tables['registration']['status'] = array();
+  $tables['registration']['order_id'] = array(
+    'relationship' => array(
+      'base' => 'commerce_order',
+      'field' => 'order_id', 
+      'handler' => 'views_handler_relationship',
+      'label' => t('Commerce Order'),
+    ),
+    'title' => t('Commerce Order ID'), 
+    'help' => t('The Commerce Order ID Number.'), 
+    'field' => array(
+      'handler' => 'views_handler_field_numeric', 
+      'click sortable' => TRUE,
+    ), 
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ), 
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+  );
 
   // Registration status table.
 
