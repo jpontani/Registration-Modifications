@@ -381,6 +381,7 @@ function registration_form_alter(&$form, &$form_state, $form_id) {
 }
 
 /**
+<<<<<<< HEAD
  * Checks to see if the entity is accepting registrations.
  */
 function registration_can_register($entity) {
@@ -414,6 +415,8 @@ function registration_can_register($entity) {
 }
 
 /**
+=======
+>>>>>>> d216e9a0d96e7d9a14d4511623db6a537d6767ec
  * Returns a whether the entity has a registration limit.
  *
  * @param $entity
