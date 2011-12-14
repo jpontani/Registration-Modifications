@@ -10,3 +10,5 @@ files[] = includes/registration.entity.inc
 files[] = includes/registration.forms.inc
 files[] = includes/registration.admin.inc
 files[] = includes/registration.theme.inc
+files[] = includes/views/handlers/registration_handler_field_registration_entity.inc
+files[] = includes/views/handlers/registration_handler_field_registration_status.inc

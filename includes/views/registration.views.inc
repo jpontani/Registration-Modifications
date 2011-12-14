@@ -191,32 +191,20 @@ function registration_views_data() {
       'handler' => 'views_handler_filter_date',
     ),
   );
-  $tables['registration']['order_id'] = array(
-    'relationship' => array(
-      'base' => 'commerce_order',
-      'field' => 'order_id', 
-      'handler' => 'views_handler_relationship',
-      'label' => t('Commerce Order'),
-    ),
-    'title' => t('Commerce Order ID'), 
-    'help' => t('The Commerce Order ID Number.'), 
+  $tables['registration']['status'] = array(
+    'title' => t('Status'),
+    'help' => t('Status of this registration (pending, final, etc)'),
     'field' => array(
-      'handler' => 'views_handler_field_numeric', 
-      'click sortable' => TRUE,
-    ), 
+      'handler' => 'registration_handler_field_registration_status',
+    ),
     'sort' => array(
       'handler' => 'views_handler_sort',
     ), 
     'filter' => array(
-      'handler' => 'views_handler_filter_numeric',
-    ),
-  );
-  $tables['registration']['registration_attached_entity'] = array(
-    'real field' => 'eid',
-    'field' => array(
-      'title' => t("Attached Entity"),
-      'help' => t('The entity this registration is associated to.'),
-      'handler' => 'registration_handler_field_registration_entity',
+      'handler' => 'views_handler_filter_string',
+    ), 
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
     ),
   );
 

@@ -153,9 +153,10 @@ function registration_schema() {
       ),
       'status' => array(
         'description' => 'The status of this registration.',
-        'type' => 'int',
+        'type' => 'varchar',
+        'length' => 50,
         'not null' => TRUE,
-        'default' => 0,
+        'default' => 'pending',
       ),
     ),
     'indexes' => array(
