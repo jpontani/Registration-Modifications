@@ -207,11 +207,19 @@ function registration_delete_multiple($registration_ids) {
     foreach ($registration_ids as $regid) {
       $reg = registration_load($regid);
       module_invoke_all('registration_delete', $reg);
+      if (module_exists('rules')) {
+        // Trigger any rules on registration delete
+        rules_invoke_event('registration_delete', $registration);
+      }
     }
   }
   else {
     $reg = registration_load($registration_ids);
     module_invoke_all('registration_delete', $reg);
+    if (module_exists('rules')) {
+      // Trigger any rules on registration delete
+      rules_invoke_event('registration_delete', $registration);
+    }
   }
   return entity_get_controller('registration')->delete($registration_ids);
 }
@@ -226,6 +234,7 @@ function registration_delete_multiple($registration_ids) {
  *   The saved registration object.
  */
 function registration_save($registration) {
+  $is_new = !isset($registration->registration_id);
   $registration->updated = REQUEST_TIME;
   // Set the creation timestamp if not set.
   if (!isset($registration->created) || empty($registration->created)) {
@@ -234,8 +243,18 @@ function registration_save($registration) {
 
   $ret = entity_get_controller('registration')->save($registration);
 
+  if (module_exists('rules')) {
+    // Trigger any rules on registration insert or update
+    if ($is_new) {
+      rules_invoke_event('registration_insert', $registration);
+    }
+    else {
+      rules_invoke_event('registration_update', $registration);
+    }
+  }
+
   // Let other modules act on a registration insert or update.
-  if (!isset($registration->registration_id)) {
+  if ($is_new) {
     module_invoke_all('registration_insert', $registration);
   }
   else {
