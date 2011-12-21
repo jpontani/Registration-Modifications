@@ -241,7 +241,17 @@ function registration_entity_view_alter(&$build, $type) {
   }
 }
 
-function registration_check_email_registered($email, $entity_type, $entity_bundle, $entity_id) {
+function registration_check_email_registered($email, $entity_info) {
+  $q = db_select('registration', 'r')
+    ->fields('r')
+    ->condition('entity_type', $entity_info['type'])
+    ->condition('entity_bundle', $entity_info['bundle'])
+    ->condition('eid', $entity_info['id'])
+    ->execute()
+    ->rowCount();
+  if ($q > 0) {
+    return TRUE;
+  }
   return FALSE;
 }
 
