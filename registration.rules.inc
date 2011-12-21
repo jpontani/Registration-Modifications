@@ -20,10 +20,14 @@ function registration_rules_event_info() {
   );
   $events['registration_update'] = array(
     'group' => t('Registration'),
-    'label' => t('After saving an existing registration'),
+    'label' => t('After saving a registration'),
     'variables' => array(
       'registration' => array(
-        'label' => t('A registration'),
+        'label' => t('The unchanged registration'),
+        'type' => 'registration',
+      ),
+      'registration_new' => array(
+        'label' => t('The saved registration'),
         'type' => 'registration',
       ),
     ),
@@ -46,8 +50,20 @@ function registration_rules_event_info() {
  * Implements hook_rules_action_info().
  */
 function registration_rules_action_info() {
-  $actions = array();
-
+  $actions['registration_send_register_confirm_email'] = array(
+    'label' => t('Send Registration Confirmation Email'),
+    'group' => t('Registration'),
+    'parameter' => array(
+      'registration' => array(
+        'type' => 'registration',
+        'label' => t('Registration'),
+        'description' => t('The registration that was just submitted.'),
+      ),
+    ),
+    'callbacks' => array(
+      'execute' => 'registration_send_confirmation_email',
+    ),
+  );
   $actions['registration_mark_registration_confirm'] = array(
     'label' => t('Mark Registration as confirmed'),
     'group' => t('Registration'),
@@ -73,4 +89,11 @@ function registration_mark_confirmed($registration_id) {
     ->fields("status", "confirm")
     ->condition('registration_id', $registration_id)
     ->execute();
+}
+
+/**
+ * Rules action callback.
+ */
+function registration_send_confirmation_email($registration) {
+  
 }

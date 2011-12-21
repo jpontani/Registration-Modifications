@@ -234,6 +234,7 @@ function registration_delete_multiple($registration_ids) {
  *   The saved registration object.
  */
 function registration_save($registration) {
+  $old = clone $registration;
   $is_new = !isset($registration->registration_id);
   $registration->updated = REQUEST_TIME;
   // Set the creation timestamp if not set.
@@ -246,19 +247,19 @@ function registration_save($registration) {
   if (module_exists('rules')) {
     // Trigger any rules on registration insert or update
     if ($is_new) {
-      rules_invoke_event('registration_insert', $registration);
+      rules_invoke_event('registration_insert', $ret);
     }
     else {
-      rules_invoke_event('registration_update', $registration);
+      rules_invoke_event('registration_update', $old, $ret);
     }
   }
 
   // Let other modules act on a registration insert or update.
   if ($is_new) {
-    module_invoke_all('registration_insert', $registration);
+    module_invoke_all('registration_insert', $ret);
   }
   else {
-    module_invoke_all('registration_update', $registration);
+    module_invoke_all('registration_update', $ret);
   }
 
   return $ret;
