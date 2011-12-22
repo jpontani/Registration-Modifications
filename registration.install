@@ -43,12 +43,7 @@ function registration_enable() {
         'language' => 'en',
         'template' => 0,
         'subject' => '%event_title Registration Reminder',
-        'content' => 'Hello %user_name, this is a reminder that you registered for %event_title. This event will take place on %event_date.
-
-        If you would like to cancel your registration, just click this link: %registration_cancel_link.
-
-        Thank you,
-        %site_name Administrator',
+        'content' => 'Hello %user_name, this is a reminder that you registered for %event_title. This event will take place on %event_date.\n\nIf you would like to cancel your registration, just click this link: %registration_cancel_link.\n\nThank you,\n%site_name Administrator',
       ))
       ->execute();
     db_insert('commerce_email')
@@ -57,10 +52,7 @@ function registration_enable() {
         'language' => 'en',
         'template' => 0,
         'subject' => '%event_title Registration Notification',
-        'content' => 'This a notification that someone registered for %event_title on %registration_date.
-
-        The following information was submitted:
-        %registration',
+        'content' => 'This a notification that someone registered for %event_title on %registration_date.\n\nThe following information was submitted:\n%registration',
       ))
       ->execute();
   }
@@ -363,11 +355,12 @@ function registration_update_7001() {
         'length' => 100,
         'not null' => TRUE,
       ),
-      'status_key' => array(
+      'statuses' => array(
         'description' => 'Unique key for the status.',
-        'type' => 'varchar',
-        'length' => 50,
+        'type' => 'test',
         'not null' => TRUE,
+        'size' => 'big',
+        'serialize' => TRUE,
       ),
       'settings' => array(
         'description' => 'Serialized object of our status settings.',
