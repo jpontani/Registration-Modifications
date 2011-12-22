@@ -5,11 +5,10 @@
  */
 
 /**
- * Form callback: create or edit a contact.
+ * Form callback: create or edit a registration.
  *
- * @param $contact
- *   The contact object to edit or for a create form an empty contact object
- *   with only a contact type defined.
+ * @param $registration
+ *   The registration object to edit or create.
  */
 function registration_form($form, &$form_state, $registration, $entity, $type) {
   $form_state['registration'] = $registration;
@@ -107,11 +106,13 @@ function registration_form_validate($form, &$form_state) {
   // verify the event hasn't sold out
   if (!registration_has_room($entity_info)) {
     drupal_set_message(t('Sorry, this event has sold out during your registration.'));
+    return FALSE;
   }
 
   // validate email address
   if (!valid_email_address($form_state['values']['email'])) {
     form_set_error('email', t('The email address is invalid.'));
+    return FALSE;
   }
   // @TODO check for duplicate registrations
   else {
@@ -119,11 +120,13 @@ function registration_form_validate($form, &$form_state) {
     if ($count > 0) {
       form_set_error('email', t('%mail is already registered for this event.',
         array('%mail' => $form_state['values']['email'])));
+      return FALSE;
     }
   }
 
   // Notify field widgets to validate their data.
   field_attach_form_validate('registration', $registration, $form, $form_state);
+  return TRUE;
 }
 
 /**
