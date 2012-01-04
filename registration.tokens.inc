@@ -67,6 +67,14 @@ function registration_token_info() {
         'name' => t('Registration Entity Link'),
         'description' => t('A link to view the entity this registration is for.'),
       ),
+      'entity_date' = array(
+        'name' => t('Registration Entity Date'),
+        'description' => t('The date the entity is set to occur on.'),
+      ),
+      'cancel_url' => array(
+        'name' => t('Registration Cancel URL'),
+        'description' => t('Link to cancel the registration.'),
+      ),
     )),
   );
 }
@@ -131,6 +139,11 @@ function registration_tokens($type, $tokens, array $data = array(), array $optio
           $entity = entity_load($reg->entity_type, $reg->eid);
           $uri = entity_uri($reg->entity_type, $entity);
           $value = url($uri['path'], $uri['options']);
+          break;
+        case "entity_date":
+          $value = "";
+          break;
+        case "cancel_url":
           break;
       }
       $items[$token] = $value;
