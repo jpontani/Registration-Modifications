@@ -25,12 +25,11 @@ function theme_registration_types($variables) {
  */
 function theme_registration($variables) {
   $registration = $variables['registration'];
-  //if ($node = node_load($registration->nid)) {
-  //  $output .= '<div><label>' . $node->type . "</label>" . l($node->title, 'node/' . $registration->nid) . '</div>';
-  //}
 
-  $output = '<div><label>' . t('Count') . '</label>' . $registration->count . '</div>';
+  $output = "<div><label>Registration #" . $registration->registration_id . "</label></div>";
+  $output .= '<div><label>' . t('Email Address') . '</label>' . $reg->mail . '</div>';
   $output .= '<div><label>' . t('Created') . '</label>' . format_date($registration->created) . '</div>';
+  $output .= '<hr><div>' . field_attach_view('registration', $reg, 'full') . '</div>';
 
   return $output;
 }
