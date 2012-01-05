@@ -144,6 +144,7 @@ function registration_tokens($type, $tokens, array $data = array(), array $optio
           $value = "";
           break;
         case "cancel_url":
+          $value = url("registration/" . $reg->registration_id . "/cancel");
           break;
       }
       $items[$token] = $value;

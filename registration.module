@@ -102,27 +102,31 @@ function registration_menu() {
     'page callback' => 'drupal_get_form',
     'file' => 'includes/registration.forms.inc',
     'page arguments' => array('registration_register_entity_form', 1, 2, 3),
-    'access arguments' => array('add registration'),
+    'access callback' => 'registration_page_access_add',
+    'access arguments' => array(1, 2, 3),
   );
   $items['registration/%registration'] = array(
     'title callback' => 'registration_page_title',
     'title arguments' => array(1),
     'page callback' => 'registration_page_view',
     'page arguments' => array(1),
-    'access arguments' => array('view registration'),
+    'access callback' => 'registration_page_access',
+    'access arguments' => array(1, 'view'),
   );
   $items['registration/%registration/view'] = array(
     'title' => 'View',
     'page callback' => 'registration_page_view',
     'page arguments' => array(1),
-    'access arguments' => array('view registration'),
+    'access callback' => 'registration_page_access',
+    'access arguments' => array(1, 'view'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
   $items['registration/%registration/edit'] = array(
     'title' => 'Edit',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('registration_form', 1),
-    'access arguments' => array('administer registration'),
+    'access callback' => 'registration_page_access',
+    'access arguments' => array(1, 'edit'),
     'file' => 'includes/registration.forms.inc',
     'weight' => 10,
     'type' => MENU_LOCAL_TASK,
@@ -131,7 +135,8 @@ function registration_menu() {
     'title' => 'Delete Registration',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('registration_delete_confirm', 1),
-    'access arguments' => array('administer registration'),
+    'access callback' => 'registration_page_access',
+    'access arguments' => array(1, 'delete'),
     'file' => 'includes/registration.forms.inc',
   );
 
@@ -198,8 +203,14 @@ function registration_permission() {
     'view any registration' => array(
       'title' => t('View any registration'),
     ),
-    'add any registration' => array(
-      'title' => t('Add any registration'),
+    'create any registration' => array(
+      'title' => t('Create any registration'),
+    ),
+    'edit any registration' => array(
+      'title' => t('Edit any registration'),
+    ),
+    'delete any registration' => array(
+      'title' => t('Delete any registration'),
     ),
   );
 
@@ -219,6 +230,37 @@ function registration_permission() {
   }
 
   return $perms;
+}
+
+/**
+ * Access callback for adding a registration.
+ */
+function registration_page_access_add($type, $bundle, $id) {
+  $regtype = registration_entity_registration_bundle(array('id' => $id, 'type' => $type, 'bundle' => $bundle));
+  return (user_access('create ' . $regtype . ' registration') || user_access('create any registration'));
+}
+
+/**
+ * Access callback for operations on an existing registration.
+ */
+function registration_page_access($registration, $op = "view", $registration_type = "registration") {
+  $type = entity_extract_ids('registration', $registration);
+  $type = $type[2];
+  return TRUE;
+  switch ($op) {
+    case "view":
+      return (user_access('view' . $type . ' registration') || user_access('view any registration'));
+      break;
+    case "edit":
+      return (user_access('edit ' . $type . ' registration') || user_access('edit any registration'));
+      break;
+    case "delete":
+      return (user_access('delete' . $type . ' registration') || user_access('delete any registration'));
+      break;
+    case "admin":
+      return user_access('administer registration');
+      break;
+  }
 }
 
 /**
