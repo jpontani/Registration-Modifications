@@ -271,6 +271,18 @@ function registration_save($registration) {
 function registration_field_extra_fields() {
   $extra = array();
 
+  foreach (node_type_get_types() as $bundle) {
+    $extra['node'][$bundle->type] = array(
+      'display' => array(
+        'registration_form' => array(
+          'label' => t('Registration Form'),
+          'description' => t('Display settings for an attached Registration form.'),
+          'weight' => 20,
+        ),
+      ),
+    );
+  }
+
   foreach (registration_entity_types() as $type => $reg_type) {
     $extra['registration'][$type] = array(
       'form' => array(

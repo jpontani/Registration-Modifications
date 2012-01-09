@@ -264,25 +264,22 @@ function registration_page_access($registration, $op = "view", $registration_typ
 }
 
 /**
- * Implements hook_entity_view_alter().
+ * Implements hook_entity_view().
  */
-function registration_entity_view_alter(&$build, $type) {
-  $types_to_alter = array();
-  $types_to_alter_query = db_select('registration_attach', 'ra')
-    ->fields('ra')
-    ->condition('entity_type', $type)
-    ->execute();
-  foreach ($types_to_alter_query as $row) {
-    $types_to_alter[] = $row->entity_bundle;
-  }
-  if (in_array($build['#bundle'], $types_to_alter)) {
-    // the type is in the types of entities to alter for registrations
-    if (!function_exists('registration_register_form')) {
-      module_load_include('inc', 'registration', 'includes/registration.forms');
-    }
-    $entity = $build['#entity'];
-    $data = entity_extract_ids($type, $entity);
-    $build['registration_register_form'] = drupal_get_form('registration_register_form', $type, $build['#bundle'], $data[0]);
+function registration_entity_view($entity, $type, $view_mode, $langauge) {
+  if ('registration' == $type) {
+    $type_to_alter = db_select('registration_attach', 'ra')
+      ->fields('ra', array('entity_bundle'))
+      ->condition('entity_type', $type)
+      ->condition('entity_bundle', $entity->type)
+      ->execute()
+      ->fetchCol();
+    $type_to_alter = $type_to_alter[0];
+    module_load_include('inc', 'registration', 'includes/registration.forms');
+    $entity->content['registration_form'] = array(
+      '#markup' => drupal_get_form('registration_register_form', $type, $build['#bundle'], $data[0]),
+      // FINISH THIS SECTION
+    );
   }
 }
 
